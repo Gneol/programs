@@ -1,0 +1,13 @@
+{
+  "resourceIds": [
+    "__program__"
+  ],
+  "resources": {
+    "__program__": {
+      "type": "program",
+      "data": {
+        "name": "test-agent"
+      }
+    }
+  }
+}

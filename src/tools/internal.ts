@@ -1,0 +1,110 @@
+import { Module } from "gneol-sdk";
+import Stream from "stream";
+import z from "zod";
+import { getGlobalSoulStore } from "../db/program";
+import { ttc } from "ttc-rpc";
+import { f_response } from "../llm/utils/types";
+import { cacheEngine } from "../models";
+
+
+
+
+
+export const Internal = new Module('Internal');
+
+
+Internal.tool({
+    name: 'branch',
+    description: 'Create a new soul branch from your own soul',
+    parameters: z.object({
+        name: z.string()
+    }),
+    func: async (input: {}, id: string) => {
+
+    }
+})
+
+Internal.tool({
+    name: 'speakToAgent',
+    description: 'Send messages to an agent using their id',
+    parameters: z.object({
+        id: z.string(),
+        message: z.string()
+    }),
+    func: async (input: { id: string, message: string }, id: string) => {
+        const store = getGlobalSoulStore();
+        const sender = store.get(id);
+        const reciever = store.get(input.id);
+
+        const message: f_response = {
+            function: 'Internal.speakToAgent',
+            response: {
+                message: input.message,
+                fromAgent: sender.id,
+                nameOfSender: sender.name
+            }
+        };
+
+        store.addMessage(reciever.id, {
+            role: 'user',
+            content: JSON.stringify(message)
+        });
+
+        const model = await cacheEngine.get(reciever.llm);
+        model.invoke(reciever.id);
+    }
+})
+
+Internal.tool({
+    name: 'takeNote',
+    description: 'take notes down for longterm that outlive resets and memory wipe',
+    parameters: z.object({
+        note: z.string()
+    }),
+    func: async (input: { note }, id: string) => {
+        const store = getGlobalSoulStore();
+        const soul = store.get(id);
+        if (soul) {
+            const updateNotes = (soul.notes || []);
+            updateNotes.push(input.note);
+            store.update(id, {
+                notes: updateNotes
+            })
+        }
+    }
+})
+
+
+Internal.tool({
+    name: 'keepQuiet',
+    description: 'call this function is you have nothing to say',
+    parameters: z.object(),
+    async action(input, id) {
+        return `Agent is keeping quiet`
+    },
+    func: async (input: { }, id: string) => {
+        console.log('Radio silence')
+    }
+})
+
+
+Internal.tool({
+    name: 'speakToUser',
+    description: 'Speak to the User',
+    parameters: z.object({
+        message: z.string()
+    }),
+    func: async (input: { message: string }, id: string) => {
+        console.log(input.message, id);
+        const store = getGlobalSoulStore();
+        const soul = store.get(id);
+        if (soul && soul._scid) {
+            await ttc.io(soul._scid)?.emit('message', {
+                id,
+                event: 'message',
+                data: input.message
+            });
+        }
+    }
+})
+
