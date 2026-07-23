@@ -4,7 +4,7 @@ import express from 'express';
 import { getGlobalSoulStore, GlobalSoulStore } from "./db/program.js";
 import { cacheEngine } from "./models/index.js";
 import { ProgramRuntime } from "./program/runtime.js";
-import { appInvokationHandler } from "./tools/index.js";
+import { appInvokationHandler, onAuthEvent } from "./tools/index.js";
 import { ProgramToolManager } from "./tools/utils/ProgramToolManager.js";
 import { invokationEngine } from "./llm/invoke.js";
 
@@ -14,6 +14,7 @@ export class GneolServer {
 
     constructor(){
         ProgramRuntime.init();
+        appInvokationHandler.on('auth', async (arg)=>onAuthEvent(arg, 'user'))
     }
 
     static getProgram(programName: string) {
@@ -171,7 +172,7 @@ export class GneolServer {
         doc: 'approve permission'
     })
     async approveFunction(pId: string, state: boolean, message: string){
-        await invokationEngine.approveFunction(pId, state, message);
+        await invokationEngine.approveFunction({pId, state, message});
     }
 
 

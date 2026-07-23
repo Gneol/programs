@@ -5,6 +5,7 @@ import { getGlobalSoulStore } from "../db/program";
 import { ttc } from "ttc-rpc";
 import { f_response } from "../llm/utils/types";
 import { cacheEngine } from "../models";
+import { markForRebuild } from "../llm/system_message";
 
 
 
@@ -17,10 +18,29 @@ Internal.tool({
     name: 'branch',
     description: 'Create a new soul branch from your own soul',
     parameters: z.object({
-        name: z.string()
+        name: z.string(),
+        backstory: z.string().optional()
     }),
-    func: async (input: {}, id: string) => {
+    func: async (input: { name: string; backstory?: string }, id: string) => {
+        const store = getGlobalSoulStore();
+        const parent = store.get(id);
+        if (!parent) throw new Error(`Soul ${id} not found`);
 
+        const branch = store.create({
+            name: input.name,
+            program: parent.program,
+            programPath: parent.programPath,
+            llm: parent.llm,
+            notes: [],
+            parentId: parent.id,
+            backstory: input.backstory
+        });
+
+        return {
+            id: branch.id,
+            name: branch.name,
+            message: `Branch '${branch.name}' created with id ${branch.id}`
+        };
     }
 })
 
@@ -84,6 +104,20 @@ Internal.tool({
     },
     func: async (input: { }, id: string) => {
         console.log('Radio silence')
+    }
+})
+
+Internal.tool({
+    name: 'refreshAppFunctions',
+    description: 'call this function is you have nothing to say',
+    parameters: z.object({}),
+    async action(input, id) {
+        return `refreshing functions list..`
+    },
+    func: async (input: { }, id: string) => {
+        // just rebuilds the system message
+        markForRebuild(id, true);
+        return 'app functions have been refreshed and added to your system message'
     }
 })
 

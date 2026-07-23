@@ -275,6 +275,7 @@ export class ProgramRuntime {
             const result = await ProgramRuntime.deployProgram(soul.programPath, soul.id);
             const runtime = ProgramRuntime.NeuralCore.get(fspath.resolve(soul.programPath));
             if (runtime) runtime.agentId = soul.id;
+            await runtime.handleToolDefinitions(runtime.program);
             console.log(`Loaded soul "${soul.id}" → program "${result.title}"`);
         } catch (err: any) {
             console.warn(`Failed to load soul "${soul.id}": ${err.message}`);
@@ -294,8 +295,7 @@ export class ProgramRuntime {
                 const resolvedPath = soul.programPath ? fspath.resolve(soul.programPath) : '';
                 const runtime = ProgramRuntime.NeuralCore.get(resolvedPath);
                 if (runtime) {
-                    markForRebuild(soul.id)
-                    await runtime.handleToolDefinitions(runtime.program);
+                    markForRebuild(soul.id, true)
                 } else {
                     // create one na
                     

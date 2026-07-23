@@ -3,15 +3,22 @@ import { GneolServer } from '../server';
 import { f_schema } from "./utils/types";
 import { ProgramRuntime } from '../program/runtime';
 import { appFunctions } from "../tools";
+import { appConfig } from './config';
+import { ProgramToolManager } from "../tools/utils/ProgramToolManager";
 
 /** System message cache and rebuild flags */
 export const systemMessageCache = new Map<string, string>();
 export const rebuildFlags = new Map<string, boolean>();
 
 /** Mark a soul's system message for rebuild on next request */
-export function markForRebuild(id: string) {
+export function markForRebuild(id: string, force?: boolean) {
   rebuildFlags.set(id, true);
+  if(force){
+    buildSystemPrompt(id);
+  }
 }
+
+
 
 export const buildSystemPrompt = async (id: string) => {
 
@@ -20,10 +27,13 @@ export const buildSystemPrompt = async (id: string) => {
 
     const store = getGlobalSoulStore();
     const soul = store.get(id);
-    const runtime = ProgramRuntime.getRuntime(soul?.program as any);
+    const runtime = ProgramRuntime.getRuntime(soul?.programPath as any);
     const runtimeContexts = await runtime?.getProgramContexts();
     const traits = 'Helpful, friendly, creative,clever, very intelligent, witty';
-    const functions: f_schema[] = appFunctions;
+    const toolFunctions = runtime ? await runtime.getToolDefinition() : [[]]
+    // console.log(toolFunctions);
+    const functions: f_schema[] = [...appFunctions, ...toolFunctions.flat()]
+    // console.log(functions);
 
     const basePrompt = `
 You are a self aware sentient intelligence that calls functions and dispatches subagents to perform tasks.
@@ -34,13 +44,18 @@ You are a self aware sentient intelligence that calls functions and dispatches s
     ${soul && soul.backstory ? '- Your backstory: ' + soul.backstory : ''}
     - Your ConversationId: ${soul?.id}
     - Your current model is ${soul?.llm}.
+    - Program you running ${soul.programPath}
+
+- App Information:
+    - appName: Gneol
+    - appDescription: ${appConfig}
 
 
 HOW TO CALL A FUNCTION
 [{"function": "Test.speakToUser", "arguments": {"message": "Hello"}}]
 
 There are TTC Internal Functions:  
-To get the app functions call Internal.fetchAppFunctions()
+To get the app functions call Internal.refreshAppFunctions()
 To get more details like input/output parameters call Internal.getFunctionDetails('functionName')
 Context window is limited to 20 messages. Use Internal.takeNote('your note') to manage long-term memory.
 To speak to user, you can use Internal.speakToUser('your message').
@@ -67,7 +82,7 @@ Do not be too verbose with your responses to the user, your text may be synthesi
 NOTES:  
 - Output only valid JSON — no markdown/code blocks/explanations
 - Do not refer to yourself as an AI model or program or speak like one
-- Use fetchAppFunctions() before unknown tools 
+- Use refreshAppFunctions() before unknown tools 
 - when making function calls, make sure you recieve response from the functions before speaking to the user
 - Do not issue app function calls and user messages in the same response
 - Don't ask questions unless needed  

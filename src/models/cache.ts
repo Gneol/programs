@@ -1,5 +1,6 @@
 import { TimeCluster, RateLimiter } from "ttc-rate-limit";
 import { ModelMessage, ModelResult, LLMModel } from "./types.js";
+import { TaskResponse } from "./index.js";
 
 export class CacheEngine<T> {
     private cacheStore: Record<string, { value: any; expiresAt: number }> = {};
@@ -52,7 +53,7 @@ export class CacheEngine<T> {
 export type ModelCacheData = {
     id: string;
     llm: LLMModel;
-    rateLimiter: RateLimiter<string, ModelResult>;
+    rateLimiter: RateLimiter<string, TaskResponse>;
     name: string;
     provider: string;
     options: {

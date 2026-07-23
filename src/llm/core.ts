@@ -24,13 +24,14 @@ export const onCompleteInvokation = async (input: {
     config?: any
 }) => {
 
+    // console.log(input.response.clean, 'CLEAN RESPONSE HERE')
     // here we invoke all the functions, get response and invoke again
     // console.log(input)
     const store = getGlobalSoulStore();
     const calls = input.response.clean as f_call[];
     const responses = await invokationEngine.invoke(input.request, calls)
 
-    if(responses.length > 0){
+    if (responses.length > 0) {
         const message = {
             role: 'user',
             content: JSON.stringify(responses)
@@ -95,33 +96,36 @@ export async function invokeModel(llm: LLMModel, soulId: string): Promise<TaskRe
         // get summary
         // get attachments if any
         let conversation_id = soulId;
+        const systemPrompt = await buildSystemPrompt(soul.id);
         const messages = [
-            { role: 'system', content: await buildSystemPrompt(soul.id) },
+            { role: 'system', content: systemPrompt },
         ];
-    
-        if(summary){
+
+        // console.log(systemPrompt)
+
+        if (summary) {
             messages.push(summary);
         }
-    
+
         messages.push(..._messages);
-    
+
         const resources = await Bucket.retrieve(conversation_id, model);
-    
+
         if (resources) {
             messages.push(resources.attachments as any);
         }
-    
+
         const response = await llm.invoke(messages as any);
-    
+
         console.log(response.content, "RAW");
-    
+
         let cleaned = await jsonCleaner.clean(response.content, llm);
-    
+
         if (!cleaned) {
             error_flag = true;
             cleaned = [];
         }
-    
+
         // in event the output is a single function call and not wrapped in an array, we wrap it in an array to maintain consistency. This is because some models may return a single function call as an object instead of an array with one object.
         if (!Array.isArray(cleaned)) {
             if (cleaned.function) {
@@ -129,7 +133,7 @@ export async function invokeModel(llm: LLMModel, soulId: string): Promise<TaskRe
                 response.content = `${JSON.stringify(cleaned, null, 2)}`; // Ensure the response is in a JSON format
             }
         }
-    
+
         // schema validation here
         let parsedData: llmOutputType | null = null;
         try {
@@ -145,18 +149,18 @@ export async function invokeModel(llm: LLMModel, soulId: string): Promise<TaskRe
             }
             parsedData = llmOutput.parse(cleaned);
         } // Validate the response against the schema
-    
+
         cleaned = repair_argument_nomal(soul, cleaned);
-    
+
         await Bucket.clear(soul.id);
-    
+
         try {
             const { tokens, notes } = await _detect_token_excess(response as any, soul.notes as any, soul, model);
-    
+
             if (tokens) {
                 await Summarizer.summarize(soul.id, llm);
             }
-    
+
             // if (notes) {
             //     await Summarizer.summarize_notes(soul.id);
             // }
@@ -164,20 +168,20 @@ export async function invokeModel(llm: LLMModel, soulId: string): Promise<TaskRe
             console.log(error)
             // it's none of our business, it won't block the operation
         }
-    
+
         // console.log(JSON.stringify(response, null, 2), "TOKEN USAGGGGGGGGEEE")
-        
+
         const raw = JSON.stringify(cleaned);
         // add to message
         await store.addMessage(soul.id, {
             role: 'assistant',
             content: raw
         });
-    
+
         // also even take token metrics
 
         Stream.trackActivity(soul.id, 'sent');
-    
+
         return {
             content: raw,
             clean: cleaned,

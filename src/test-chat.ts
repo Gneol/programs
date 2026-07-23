@@ -2,15 +2,26 @@ import * as readline from 'readline';
 import { RPCClient } from './rpc.client.js';
 
 const api = new RPCClient('http://localhost:3999', async () => '', async (socket) => {
-    socket.on('message', (data: any) => {
-        console.log(`\n[AI]: ${data.data}`);
-    });
 
-    socket.on('permission', (data: any)=> {
-      console.log(data)
-      // api.GneolServer.approveFunction(data.data.pId, true, '');
-    })
+  socket.off('message', onMessage);
+  socket.off('permission', onPermission);
+  socket.on('message', onMessage);
+
+  socket.on('permission', onPermission)
 });
+
+const onMessage = (data: any) => {
+  console.log(`\n-- { ${data.data}`);
+}
+
+const onPermission = (data: any) => {
+  console.log(data.data)
+  api.GneolServer.approveFunction(data.data.pId, true, '');
+}
+
+
+
+// api.GneolServer.approveFunction(data.data.pId, data.data.method, true, '');
 
 async function main() {
   let soulId = process.argv[2];

@@ -37,6 +37,7 @@ export class Soul {
     cachedTokens: number;
     _scid: string;
     messagesPath: string;
+    private _messages: Message[] | null = null; /* In-memory cache; loaded lazily from file */
 
     constructor(config: {
         id?: string;
@@ -72,18 +73,22 @@ export class Soul {
         this.messagesPath = config.messagesPath || path.join(MESSAGES_DIR, `${this.id}.json`);
     }
 
-    /** Load messages from the messages file (returns empty array if missing) */
+    /** Load messages from memory cache (if available) or from disk */
     loadMessages(): Message[] {
-        try {
-            const raw = fs.readFileSync(this.messagesPath, 'utf-8');
-            return JSON.parse(raw);
-        } catch {
-            return [];
+        if (this._messages === null) {
+            try {
+                const raw = fs.readFileSync(this.messagesPath, 'utf-8');
+                this._messages = JSON.parse(raw);
+            } catch {
+                this._messages = [];
+            }
         }
+        return this._messages;
     }
 
-    /** Save messages to the messages file */
+    /** Save messages to memory cache and persist to file */
     saveMessages(messages: Message[]): void {
+        this._messages = messages;
         ensureDir(MESSAGES_DIR);
         fs.writeFileSync(this.messagesPath, JSON.stringify(messages, null, 2), 'utf-8');
     }
@@ -142,12 +147,11 @@ export class GlobalSoulStore {
 
     private saveSoulConfig(soul: Soul): void {
         ensureDir(SOULS_DIR);
+        // Exclude runtime-only fields (_messages) — use type assertion to access private field
+        const { _messages, ...config } = soul as any;
         fs.writeFileSync(
             this.soulFilePath(soul.id),
-            JSON.stringify(soul,
-                null,
-                2
-            ),
+            JSON.stringify(config, null, 2),
             'utf-8'
         );
     }
@@ -160,12 +164,10 @@ export class GlobalSoulStore {
     /* ── public API ─────────────────────────────────────── */
 
     /** Create a new soul and persist it */
-    create(config: { name: string; program: string; programPath: string, llm: string, notes: string[], parentId?: string }): Soul {
+    create(config: { name: string; program: string; programPath: string, llm: string, notes: string[], parentId?: string, backstory?: string }): Soul {
         const soul = new Soul(config);
         this.saveSoulConfig(soul);
-        // Initialize empty messages file
-        ensureDir(MESSAGES_DIR);
-        fs.writeFileSync(soul.messagesPath, '[]', 'utf-8');
+        // Don't create messages file upfront — loadMessages returns [] lazily on first access
         this.cache.set(soul.id, soul);
         return soul;
     }

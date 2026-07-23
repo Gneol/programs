@@ -17,12 +17,14 @@ export class InvokeEngine {
     constructor() {
     }
 
-    approveFunction = async (pId: string, state: boolean, message: string) => {
-        const [name, id] = pId.split('|');
-        if (name!.startsWith('tool.')) {
-            await ProgramToolManager.approveFunction(pId, state, message);
+    approveFunction = async (query: { pId: string, state: boolean, message: string
+    }) => {
+        const [type, module, tool, pId] = query.pId.split('.')
+        if (query.pId.startsWith('worker') || query.pId.startsWith('http')) {
+            await ProgramToolManager.approveFunction(query.pId, query.state, query.message);
         } else {
-            await appInvokationHandler.approve(pId, state, message);
+            // console.log(pId, query.state, query.message);
+            await appInvokationHandler.approve(pId, query.state, query.message);
         }
     }
 
@@ -32,6 +34,8 @@ export class InvokeEngine {
         // some are gneol app native functions
         const responses: f_response[] = [];
 
+
+        console.log(`Calling  functions....`)
         for (const call of calls) {
             const name = call.function;
             let response;
@@ -59,6 +63,9 @@ export class InvokeEngine {
                 })
             }
         }
+
+        // console.log(responses)
+        console.log(`Done calling  functions....`)
 
         return responses;
     }

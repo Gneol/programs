@@ -1,5 +1,5 @@
 import http from 'node:http';
-import { Stream } from '../db/stream';
+import { Stream } from '../../db/stream';
 
 type ModuleEntry = {
     definitions: any[];
@@ -90,7 +90,7 @@ export class HttpManager {
                                     Stream.publish_event('llm', 'tool', {
                                         state: data,
                                         type: 'action_log',
-                                    }).catch(() => {});
+                                    }).catch(() => { });
                                     break;
                                 case 'invoke':
                                     resolve(data);
@@ -99,7 +99,7 @@ export class HttpManager {
                                     reject(new Error(data.message || 'Tool error'));
                                     break;
                                 case 'auth':
-                                    Stream.publish_event('permission', 'tool', data).catch(() => {});
+                                    Stream.publish_event('permission', 'tool', data).catch(() => { });
                                     break;
                             }
                         }
@@ -118,7 +118,7 @@ export class HttpManager {
     static async approveFunction(pId: string, state: boolean, message: string) {
         // pId format: "<moduleName>|<callbackId>", but for HTTP we may not need the prefix
         // For simplicity, we extract module name from the pId if prefixed
-        const [module] = pId.split('|');
+        const [module, tool] = pId.split('.')
         const entry = this.moduleInstances[module];
         if (!entry) return;
         await this.httpPost(`${entry.baseUrl}/auth`, { pId, state, message });

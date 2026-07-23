@@ -5,6 +5,7 @@
 import { Worker } from 'worker_threads';
 import path from 'path';
 import { Stream } from '../../db/stream';
+import { onAuthEvent } from '..';
 
 export type ModuleEntry = {
     definition: any[];
@@ -16,9 +17,10 @@ export class WorkerManager {
 
     static addTool = async (agentId: string, scriptPath: string): Promise<{ moduleName: string, definitions: any[] }> => {
         const absPath = path.resolve(__dirname, scriptPath);
-        const worker = new Worker(absPath, {
-            execArgv: ['--require', 'ts-node/register']
-        });
+        const ext = path.extname(absPath);
+        // .ts files need a transpiler; .js files run natively (assumes ESM support if needed)
+        const execArgv = ext === '.ts' ? ['--require', 'ts-node/register'] : [];
+        const worker = new Worker(absPath, { execArgv });
 
         const response = await new Promise<{ definitions: any[], name: string }>((resolve, reject) => {
             const timeout = setTimeout(() => reject(new Error('Timeout')), 5000);
@@ -63,26 +65,33 @@ export class WorkerManager {
         if (!entry) throw new Error(`Module '${call.function}' not registered`);
 
         return new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => reject(new Error('Timeout')), 10000);
+            const timeout = setTimeout(() => reject(new Error('Timeout')), 5000);
 
             const handler = (msg: any) => {
+                console.log(msg)
                 if (msg.id === id && (msg.type === 'invoke' || msg.type === 'error')) {
                     clearTimeout(timeout);
                     entry.instance.removeListener('message', handler);
                     if (msg.type === 'error') reject(new Error(msg.message));
                     else resolve(msg.data);
                 }
+                if(msg.type === 'auth'){
+                    onAuthEvent(msg, 'worker')
+                }
             };
             entry.instance.on('message', handler);
-            entry.instance.postMessage({ id, type: 'invoke', method: call.function, args: call.arguments });
+            // console.log(`${module}.${method}`)
+            entry.instance.postMessage({ id, type: 'invoke', method: `${module}.${method}`, args: call.arguments });
         });
     }
 
     static async approveFunction(pId: string, state: boolean, message: string) {
-        const [module, id] = pId.split('|');
+        // console.log(pId);
+        const [type, module, tool, pid] = pId.split('.')
         const entry = this.moduleInstances[module];
+        // console.log(entry, module, pId)
         if (entry) {
-            entry.instance.postMessage({ id, type: 'auth', pId, state, message });
+            entry.instance.postMessage({  type: 'auth',  pId: pid, state, message });
         }
     }
 

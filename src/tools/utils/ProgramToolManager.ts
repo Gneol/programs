@@ -5,7 +5,7 @@
 // ============================================================================
 
 import { WorkerManager } from './WorkerManager';
-import { HttpManager } from '../../program/HttpManager';
+import { HttpManager } from './HttpManager';
 import { f_schema } from '../../llm/utils/types';
 import { GneolProgram } from "../../program/types";
 import * as fspath from 'path';
@@ -51,14 +51,20 @@ export class ProgramToolManager {
                     moduleOwner.set(modName, 'http');
                 }
             }
+
             // Shared scriptMap: keyed by URL (for getDefinition)
             scriptMap[scriptPath] = this.removeCollition(definitions);
             return definitions;
         } else {
-            const { moduleName, definitions } = await WorkerManager.addTool(agentId, scriptPath);
-            moduleOwner.set(moduleName, 'worker');
-            scriptMap[scriptPath] = this.removeCollition(definitions);
-            return definitions;
+            try {
+                const { moduleName, definitions } = await WorkerManager.addTool(agentId, scriptPath);
+                moduleOwner.set(moduleName, 'worker');
+                console.log(definitions)
+                scriptMap[scriptPath] = this.removeCollition(definitions);
+                return definitions;
+            } catch (error) {
+                console.log(error)
+            }
         }
     }
 
@@ -82,21 +88,20 @@ export class ProgramToolManager {
     }
 
     static async approveFunction(pId: string, state: boolean, message: string) {
-        const [module] = pId.split('|');
-        const owner = moduleOwner.get(module);
-        if (!owner) return;
-        return owner === 'worker'
+        const [type] = pId.split('.');
+        return type === 'worker'
             ? WorkerManager.approveFunction(pId, state, message)
             : HttpManager.approveFunction(pId, state, message);
     }
 
     static getDefinition(scriptPath: string): any[] | undefined {
         const record = scriptMap[scriptPath];
+        // console.log(scriptPath, scriptMap);
         if (record) return record;
         // Try HTTP manager: if the URL is registered, fetch definitions
         const entry = HttpManager.moduleInstances[scriptPath];
         if (entry) return entry.definitions;
-        return undefined;
+        return [];
     }
 
     static terminate(moduleName: string): void {

@@ -71,6 +71,7 @@ export async function ModelInstance(config: BaseModelConfig): Promise<ModelCache
   const llm = await createLLMInstance(config);
 
   const rateLimit = config.rateLimit ?? 20;
+  console.log('register .....')
 
   const rateLimiter = new RateLimiter<string, TaskResponse>({
     id: cacheKey,

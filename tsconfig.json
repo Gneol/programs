@@ -16,6 +16,6 @@
     "forceConsistentCasingInFileNames": true,
     "types": ["node"]
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "custom_tool.ts"],
   "exclude": ["node_modules", "dist", "src/llm"]
 }
