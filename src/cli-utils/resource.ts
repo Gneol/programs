@@ -27,25 +27,19 @@ export async function approveFunction(id: string, state: boolean): Promise<void>
 }
 
 /** Deploy a .gneol program to the server */
-export async function deploy(filePath: string): Promise<void> {
+export async function deploy(filePath: string): Promise<{ soulId: string; programPath: string }> {
   const resolvedPath = path.resolve(filePath);
   if (!fs.existsSync(resolvedPath)) {
-    console.error(`File not found: ${resolvedPath}`);
-    process.exit(1);
+    throw new Error(`File not found: ${resolvedPath}`);
   }
-  try {
-    const res = await api.GneolServer.deploy(resolvedPath);
-    if (res.status === 'error') {
-      console.error(`Error: ${res.data || 'Unknown error'}`);
-      process.exit(1);
-    }
-    const result = res.data;
-    console.log(`Deployed: ${result.title}`);
-    console.log(`Memory ID: ${result.soulId}`);
-  } catch (err: any) {
-    console.error(`Error: ${err.message}`);
-    process.exit(1);
+  const res = await api.GneolServer.deploy(resolvedPath);
+  if (res.status === 'error') {
+    throw new Error(res.data || 'Deploy failed');
   }
+  const result = res.data;
+  console.log(`Deployed: ${result.title}`);
+  console.log(`Memory ID: ${result.soulId}`);
+  return { soulId: result.soulId, programPath: resolvedPath };
 }
 
 /** Convert .gneol to/from JSON/YAML */

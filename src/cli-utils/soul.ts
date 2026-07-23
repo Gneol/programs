@@ -5,6 +5,7 @@ const PAGE_SIZE = 10;
 interface AgentRecord {
   id: string;
   name: string;
+  programPath: string;
 }
 
 /**
@@ -12,7 +13,17 @@ interface AgentRecord {
  */
 export function fetchAgents(): AgentRecord[] {
   const store = getGlobalSoulStore();
-  return store.list().map(s => ({ id: s.id, name: s.name }));
+  return store.list().map(s => ({ id: s.id, name: s.name, programPath: s.programPath }));
+}
+
+/**
+ * Fetch a single agent (soul) by ID.
+ */
+export function getAgent(id: string): AgentRecord | undefined {
+  const store = getGlobalSoulStore();
+  const s = store.get(id);
+  if (!s) return undefined;
+  return { id: s.id, name: s.name, programPath: s.programPath };
 }
 
 /**

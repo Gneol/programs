@@ -502,6 +502,6 @@ export class ProgramRuntime {
             role: 'user',
             content: JSON.stringify(format_message)
         });
-        await modelData.invoke(chat.id)
+        await modelData?.invoke(chat.id)
     }
 }

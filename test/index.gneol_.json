@@ -1,0 +1,41 @@
+{
+  "resourceIds": [
+    "__program__",
+    "model_0",
+    "__summarization__"
+  ],
+  "resources": {
+    "__program__": {
+      "type": "program",
+      "data": {
+        "name": "test",
+        "model": "eagle-eye",
+        "env": ".env",
+        "contexts": [
+          {
+            "label": "Readme",
+            "resource": "README.md"
+          }
+        ]
+      }
+    },
+    "model_0": {
+      "type": "model",
+      "data": {
+        "name": "eagle-eye",
+        "provider": "openrouter",
+        "modelId": "openai/gpt-4o",
+        "apiKey": "OPENROUTER_API_KEY",
+        "temperature": 0.2,
+        "maxTokens": 4000
+      }
+    },
+    "__summarization__": {
+      "type": "summarization",
+      "data": {
+        "model": "eagle-eye",
+        "prompt": "Summarize in 3 bullets"
+      }
+    }
+  }
+}

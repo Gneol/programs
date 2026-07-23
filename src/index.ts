@@ -155,6 +155,24 @@ program
     }
   });
 
+// ─── Init (default) ───
+
+import { initializeSession } from './cli-utils/init.js';
+import { launchTerminal } from './cli-utils/terminal.js';
+
+program
+  .command('init')
+  .description('Initialize a Gneol session in the current directory')
+  .action(async () => {
+    try {
+      const { soulId, programPath } = await initializeSession();
+      await launchTerminal(soulId, programPath);
+    } catch (err: any) {
+      console.error(err.message);
+      process.exit(1);
+    }
+  });
+
 // ─── Start Server ───
 
 program
@@ -188,5 +206,11 @@ export default program;
 
 // If run directly
 if (require.main === module) {
-  program.parse(process.argv);
+  // If no command given, default to 'init'
+  const args = process.argv.slice(2);
+  if (args.length === 0 || args[0].startsWith('-')) {
+    program.parse(['node', 'gneol-cli', 'init', ...args]);
+  } else {
+    program.parse(process.argv);
+  }
 }
