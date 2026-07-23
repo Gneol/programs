@@ -40,10 +40,7 @@ export class WorkerManager {
 
         worker.on('message', async (msg: any) => {
             if (msg.action) {
-                await Stream.publish_event('llm', agentId, {
-                    state: msg.action,
-                    type: 'action_log'
-                });
+                await Stream.publish_event('llm', agentId, msg.action);
             }
             if (msg.permission) {
                 await Stream.publish_event('permission', agentId, msg.permission);

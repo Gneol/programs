@@ -4,7 +4,7 @@ import { ProgramRuntime } from "../program/runtime.js";
 
 
 
-export type TTCEvents = 'sentinel_dispatch' | 'sentinel_terminated' | 'llm' | 'permission'
+export type TTCEvents = 'llm' | 'permission' | 'action_log' | 'network'
 
 export type State = {
     ai: number,

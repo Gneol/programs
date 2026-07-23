@@ -7,6 +7,7 @@ import { ProgramRuntime } from "./program/runtime.js";
 import { appInvokationHandler, onAuthEvent } from "./tools/index.js";
 import { ProgramToolManager } from "./tools/utils/ProgramToolManager.js";
 import { invokationEngine } from "./llm/invoke.js";
+import { Stream } from "./db/stream.js";
 
 
 export class GneolServer {
@@ -15,6 +16,9 @@ export class GneolServer {
     constructor(){
         ProgramRuntime.init();
         appInvokationHandler.on('auth', async (arg)=>onAuthEvent(arg, 'user'))
+        appInvokationHandler.on('action', async (arg)=>{
+            Stream.publish_event('action_log', arg.id, arg.action);
+        })
     }
 
     static getProgram(programName: string) {
@@ -156,7 +160,55 @@ export class GneolServer {
         }
     }
 
+    @ttc.describe({
+        doc: 'get chat history for a soul with pagination',
+        parameterSchema: z.object({
+            id: z.string(),
+            page: z.number().optional().default(1),
+            limit: z.number().optional().default(50)
+        })
+    })
+    async history(id: string, page: number = 1, limit: number = 50) {
+        const store = getGlobalSoulStore();
+        const soul = store.get(id);
+        if (!soul) throw new Error(`Soul not found: ${id}`);
 
+        const allMessages = soul.loadMessages();
+        // const total = allMessages.length;
+        const offset = (page - 1) * limit;
+        const messages = allMessages.slice(offset, offset + limit);
+        console.log(messages);
+        return messages || [];
+    }
+
+    @ttc.describe({
+        doc: 'trigger an agent with a message (for schedules/automations)',
+        parameterSchema: z.object({
+            id: z.string(),
+            message: z.string()
+        })
+    })
+    async trigger(id: string, message: string) {
+        const ctx = ttc.requestContext(arguments);
+        const store = getGlobalSoulStore();
+        const soul = store.get(id);
+        if (!soul) throw new Error(`Soul not found: ${id}`);
+        if (ctx._scid) store.update(id, { _scid: ctx._scid });
+
+        const format_message = JSON.stringify([{
+            function: "TTCInternal.trigger",
+            response: { message }
+        }]);
+        store.addMessage(id, { role: 'user', content: format_message });
+
+        const modelData = await cacheEngine.get(soul.llm);
+        if (!modelData) throw new Error(`Model "${soul.llm}" not cached for soul ${soul.id}`);
+
+        await modelData.invoke(soul.id);
+        return 'trigger sent';
+    }
+
+    
 
     @ttc.describe({
         doc: 'deploy a .gneol program file',

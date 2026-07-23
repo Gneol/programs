@@ -38,6 +38,11 @@ export const onCompleteInvokation = async (input: {
         }
         const soul = store.get(input.request);
         store.addMessage(input.request, message as any);
+        await store.update(soul.id, {
+            outputTokens: (soul.outputTokens || 0) + input.response.usage_metadata.outputTokens,
+            inputTokens: (soul.inputTokens || 0) + input.response.usage_metadata.inputTokens,
+            cachedTokens: (soul.cachedTokens || 0) + input.response.usage_metadata.cachedTokens
+        })
         // invoke again
         const modelData = await cacheEngine.get(soul.llm)
         await modelData.invoke(soul.id);
@@ -55,6 +60,13 @@ export const onErrorOnInvokation = async (input: {
 }
 
 
+
+const randomThinkingText = (state: 'active' | 'inactive'): string => {
+    const thinkingTexts = ['Thinking', 'Processing', 'Analyzing', 'Computing', 'Pondering'];
+    const endThinkingTexts = ['Done', 'Completed', 'Finished', 'Ready', 'Processed'];
+    const index = Math.floor(Math.random() * thinkingTexts.length);
+    return state === 'active' ? thinkingTexts[index] : endThinkingTexts[index]
+}
 const repair_argument_nomal = (chat: Soul, calls: f_call[]) => {
     return calls.map(call => {
         if (call.function === 'TTCInternal.speakToUser') {
@@ -115,6 +127,10 @@ export async function invokeModel(llm: LLMModel, soulId: string): Promise<TaskRe
             messages.push(resources.attachments as any);
         }
 
+        Stream.publish_event('llm', conversation_id, {
+            state: randomThinkingText('active'),
+            type: 'state'
+        })
         const response = await llm.invoke(messages as any);
 
         console.log(response.content, "RAW");
@@ -181,7 +197,10 @@ export async function invokeModel(llm: LLMModel, soulId: string): Promise<TaskRe
         // also even take token metrics
 
         Stream.trackActivity(soul.id, 'sent');
-
+        Stream.publish_event('llm', conversation_id, {
+            state: randomThinkingText('inactive'),
+            type: 'state'
+        })
         return {
             content: raw,
             clean: cleaned,

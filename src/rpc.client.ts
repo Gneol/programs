@@ -342,6 +342,24 @@ export class RPCClient {
             return await RPCClient.apiCallback('GneolServer.list', [resource, page, limit, id]);
         },
         /**
+         * get chat history for a soul with pagination
+         *
+         * @param {id: string, page: number, limit: number}
+         * @returns {Promise<rpcResponseType<any>>}
+         */
+        async history(id: string, page: number, limit: number): Promise<rpcResponseType<any>> {
+            return await RPCClient.apiCallback('GneolServer.history', [id, page, limit]);
+        },
+        /**
+         * trigger an agent with a message (for schedules/automations)
+         *
+         * @param {id: string, message: string}
+         * @returns {Promise<rpcResponseType<any>>}
+         */
+        async trigger(id: string, message: string): Promise<rpcResponseType<any>> {
+            return await RPCClient.apiCallback('GneolServer.trigger', [id, message]);
+        },
+        /**
          * deploy a .gneol program file
          *
          * @param {programPath: string}

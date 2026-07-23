@@ -5,6 +5,7 @@ import { ProgramRuntime } from '../program/runtime';
 import { ProgramToolManager } from "../tools/utils/ProgramToolManager";
 import { getGlobalSoulStore } from "../db/program";
 import { ttc } from "ttc-rpc";
+import { Stream } from "../db/stream";
 
 
 type GneolEvents =
@@ -53,17 +54,26 @@ export class InvokeEngine {
             } else {
                 try {
                     response = await appInvokationHandler.invoke(conversation_id, call.function as any, call.arguments);
+
+                    if (call.function === 'Internal.takeNote' && calls.length === 0) {
+                        response = '...'
+                    }
                 } catch (error) {
                     console.log(error);
                     response = error.message;
                 }
             }
 
+            Stream.publish_event('llm', conversation_id, {
+                state: 'idle'
+            })
             if (response) {
                 responses.push({
                     function: call.function as any,
                     response
                 })
+            } else {
+
             }
         }
 

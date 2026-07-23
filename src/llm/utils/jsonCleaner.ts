@@ -63,7 +63,7 @@ export class gneolJSONCleaner {
         jsonArray = jsonArray.map(item => {
             if (typeof item === 'string') {
                 // return {
-                //     function: 'TTCInternal.speakToUser',
+                //     function: 'Internal.speakToUser',
                 //     arguments: {
                 //         message: item
                 //     }
@@ -86,7 +86,7 @@ export class gneolJSONCleaner {
         console.log(jsonArray, textArray)
 
         return textArray.length > 0 ? jsonArray.concat({
-            function: 'TTCInternal.speakToUser',
+            function: 'Internal.speakToUser',
             arguments: {
                 message: textArray.join(' ')
             }
@@ -156,7 +156,7 @@ export class gneolJSONCleaner {
                 console.log(error, 'Error message')
                 if (await this.checkForTextOnlyOutput(output)) {
                     return [{
-                        function: 'TTCInternal.speakToUser',
+                        function: 'Internal.speakToUser',
                         arguments: {
                             message: output
                         }
@@ -316,8 +316,8 @@ ${zodToTs(llmOutput)}
 
 Rules:
 - Return only the fixed JSON string. Do not include any explanations, error text, markup, or surrounding text.
-- If you see hanging text that is not part of any function call, wrap it in a TTCInternal.speakToUser function call with a message argument.
-- If the output contains mistakes like [{"TTCInternal.speakToUser": "message"}] instead of the correct format {function: "TTCInternal.speakToUser", arguments: {message: "message"}}, fix it.
+- If you see hanging text that is not part of any function call, wrap it in a Internal.speakToUser function call with a message argument.
+- If the output contains mistakes like [{"Internal.speakToUser": "message"}] instead of the correct format {function: "Internal.speakToUser", arguments: {message: "message"}}, fix it.
 - Do not echo the error message or any part of the instructions back in your response.`
 
         const userPrompt = `Fix this JSON.\n\nOutput:\n${output}\n`

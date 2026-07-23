@@ -37,8 +37,8 @@ export async function deploy(filePath: string): Promise<{ soulId: string; progra
     throw new Error(res.data || 'Deploy failed');
   }
   const result = res.data;
-  console.log(`Deployed: ${result.title}`);
-  console.log(`Memory ID: ${result.soulId}`);
+  // console.log(`Deployed: ${result.title}`);
+  // console.log(`Memory ID: ${result.soulId}`);
   return { soulId: result.soulId, programPath: resolvedPath };
 }
 

@@ -132,10 +132,7 @@ export class ProgramToolManagerHttp {
                             switch (lastEventName) {
                                 case 'action':
                                     // Forward action log to the stream
-                                    Stream.publish_event('llm', id, {
-                                        state: data,
-                                        type: 'action_log',
-                                    }).catch(() => {});
+                                    Stream.publish_event('action_log', id, data).catch(() => {});
                                     break;
                                 case 'invoke':
                                     // Final result — resolve the promise

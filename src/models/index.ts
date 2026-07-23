@@ -89,7 +89,9 @@ export async function ModelInstance(config: BaseModelConfig): Promise<ModelCache
 
 
   const invoke = async (soulId: string) => {
-    await rateLimiter.invoke(soulId);
+    await rateLimiter.invoke(soulId, {
+      _urId: soulId
+    });
   };
 
   const data: ModelCacheData = {

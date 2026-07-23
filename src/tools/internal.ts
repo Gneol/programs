@@ -1,11 +1,11 @@
 import { Module } from "gneol-sdk";
-import Stream from "stream";
 import z from "zod";
 import { getGlobalSoulStore } from "../db/program";
 import { ttc } from "ttc-rpc";
 import { f_response } from "../llm/utils/types";
 import { cacheEngine } from "../models";
 import { markForRebuild } from "../llm/system_message";
+import { Stream } from "../db/stream";
 
 
 
@@ -15,12 +15,15 @@ export const Internal = new Module('Internal');
 
 
 Internal.tool({
-    name: 'branch',
-    description: 'Create a new soul branch from your own soul',
+    name: 'subagent',
+    description: 'Create a sub agent for sub tasks',
     parameters: z.object({
         name: z.string(),
         backstory: z.string().optional()
     }),
+    async action(input: { name: string; backstory?: string }, id) {
+        return `Creating subagent ${input.name} with backstory "${input.backstory?.slice(0, 20)}"`
+    },
     func: async (input: { name: string; backstory?: string }, id: string) => {
         const store = getGlobalSoulStore();
         const parent = store.get(id);
@@ -64,6 +67,14 @@ Internal.tool({
                 nameOfSender: sender.name
             }
         };
+
+        [sender.id, reciever.id].forEach(id => {
+
+            Stream.publish_event('action_log', id, 
+                    `⏺ ✉️  [${sender.name}] ──❯ [${reciever.name}]
+      └── ${input.message}\n`
+            )
+        });
 
         store.addMessage(reciever.id, {
             role: 'user',

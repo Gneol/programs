@@ -87,10 +87,7 @@ export class HttpManager {
 
                             switch (lastEventName) {
                                 case 'action':
-                                    Stream.publish_event('llm', id, {
-                                        state: data,
-                                        type: 'action_log',
-                                    }).catch(() => { });
+                                    Stream.publish_event('action_log', id, data).catch(() => { });
                                     break;
                                 case 'invoke':
                                     resolve(data);

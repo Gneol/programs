@@ -16,16 +16,13 @@ export const CliModule = new Module('Cli');
 CliModule.tool({
     name: 'setWorkspace',
     description: "Change the current workspace directory for the agent",
-    auth: async (input) => {
-        return false; // workspace changes are low-risk
-    },
     action: async (input: any) => {
         return `changing workspace to ${input.path}`;
     },
     parameters: z.object({
         path: z.string().describe("Absolute or relative path to set as the workspace directory")
     }),
-    func: async (input: { path: string }): Promise<any> => {
+    func: async (input: { path: string }, id: string): Promise<any> => {
         return 'set workspace';
     }
 })

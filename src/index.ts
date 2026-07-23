@@ -109,6 +109,7 @@ program
     const state = opts.no ? false : true;
     try {
       await approveFunction(opts.id, state);
+      process.exit(0)
     } catch (err: any) {
       console.error(err.message);
     }
@@ -122,7 +123,9 @@ program
   .requiredOption('-f, --file <path>', 'Path to the .gneol script file')
   .action(async (options) => {
     const resolvedPath = path.resolve(options.file);
-    await deploy(resolvedPath);
+    const response = await deploy(resolvedPath);
+    console.log(JSON.stringify(response, null, 2))
+    process.exit(0)
   });
 
 // ─── Rollback ───
@@ -149,6 +152,7 @@ program
   .action(async (opts: { file: string; to: string; output?: string }) => {
     try {
       await convert(opts.file, opts.to, opts.output || '');
+      process.exit(0)
     } catch (err: any) {
       console.error(err.message);
       process.exit(1);

@@ -1,6 +1,5 @@
 import fs from 'fs';
 import path from 'path';
-import { getGlobalSoulStore } from '../db/program';
 import { fetchAgents, getAgent } from './soul';
 import { deploy } from './resource';
 
