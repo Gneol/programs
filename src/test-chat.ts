@@ -4,10 +4,7 @@ import { RPCClient } from './rpc.client.js';
 const api = new RPCClient('http://localhost:3999', async () => '', async (socket) => {
 
   socket.off('message', onMessage);
-  socket.off('permission', onPermission);
   socket.on('message', onMessage);
-
-  socket.on('permission', onPermission)
 });
 
 const onMessage = (data: any) => {

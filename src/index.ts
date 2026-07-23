@@ -58,6 +58,7 @@ for (const resource of resources) {
       } catch (err: any) {
         console.error(err.message);
       }
+      process.exit(0)
     });
 
   resourceCmd

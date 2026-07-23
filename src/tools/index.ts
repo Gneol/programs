@@ -26,19 +26,18 @@ export const appInvokationHandler = serverLocalModules(tools)
 //     console.log('invoked oh')
 // }, 5000)
 
-export const onAuthEvent = (args, type)=> {
+export const onAuthEvent = async (args, type) => {
     const store = getGlobalSoulStore();
     const pId = `${type}.${args.permission.method}.${args.permission.pId}`;
     const soul = store.get(args.id);
-    ttc.io(soul._scid)?.emit('permission', {
+    await ttc.io(soul._scid)?.emit('message', {
         id: soul.id,
         event: 'permission',
-        type,
-        data: {
+        data:  {
             ...args.permission,
             pId
         }
-    })
+    });
 }
 
 

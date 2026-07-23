@@ -87,7 +87,7 @@ export class HttpManager {
 
                             switch (lastEventName) {
                                 case 'action':
-                                    Stream.publish_event('llm', 'tool', {
+                                    Stream.publish_event('llm', id, {
                                         state: data,
                                         type: 'action_log',
                                     }).catch(() => { });
@@ -99,7 +99,7 @@ export class HttpManager {
                                     reject(new Error(data.message || 'Tool error'));
                                     break;
                                 case 'auth':
-                                    Stream.publish_event('permission', 'tool', data).catch(() => { });
+                                    Stream.publish_event('permission', id, data).catch(() => { });
                                     break;
                             }
                         }

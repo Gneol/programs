@@ -3,6 +3,8 @@ import { appInvokationHandler } from "../tools";
 import { f_call, f_response } from './utils/types'
 import { ProgramRuntime } from '../program/runtime';
 import { ProgramToolManager } from "../tools/utils/ProgramToolManager";
+import { getGlobalSoulStore } from "../db/program";
+import { ttc } from "ttc-rpc";
 
 
 type GneolEvents =
@@ -17,7 +19,8 @@ export class InvokeEngine {
     constructor() {
     }
 
-    approveFunction = async (query: { pId: string, state: boolean, message: string
+    approveFunction = async (query: {
+        pId: string, state: boolean, message: string
     }) => {
         const [type, module, tool, pId] = query.pId.split('.')
         if (query.pId.startsWith('worker') || query.pId.startsWith('http')) {
@@ -74,7 +77,15 @@ export class InvokeEngine {
 
 
     static emit = async (id: string, event: GneolEvents, args: any) => {
-        const runtime = ProgramRuntime.getRuntime(id);
+        const soul = getGlobalSoulStore().get(id);
+
+        await ttc.io(soul._scid)?.emit('message', {
+            id: soul.id,
+            event: event,
+            data: args
+        })
+
+        const runtime = ProgramRuntime.getRuntime(soul.programPath);
 
         if (!runtime) return;
 

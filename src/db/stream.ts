@@ -26,14 +26,14 @@ export class Stream {
             const ai_elapsed = (Date.now() - state.ai) / 1000;
             // if ai has not recieved message
             if (state.messageState === 'sent' && ai_elapsed > 60000) {
-               // Only fire idle on transition from active -> idle
-               if(state.state !== 'idle'){
-                   state.state = 'idle';
-                   const runtime = ProgramRuntime.getRuntime(key);
-                   if(runtime){
-                       runtime.invoke('Idle');
-                   }
-               }
+                // Only fire idle on transition from active -> idle
+                if (state.state !== 'idle') {
+                    state.state = 'idle';
+                    const runtime = ProgramRuntime.getRuntime(key);
+                    if (runtime) {
+                        runtime.invoke('Idle');
+                    }
+                }
             } else {
                 state.state = 'active';
             }
@@ -61,10 +61,10 @@ export class Stream {
         this.activityTracker.set(id, state)
     }
 
-    static publish_event = async (event: TTCEvents, conversation_id: string, data: any) => {
+    static publish_event = async (event: TTCEvents, agent_id: string, data: any) => {
         try {
             // console.log(event, data, scid);
-            await InvokeEngine.emit(conversation_id, event as any, data);
+            await InvokeEngine.emit(agent_id, event as any, data);
         } catch (error) {
             console.error('Error publishing event:', error);
         }

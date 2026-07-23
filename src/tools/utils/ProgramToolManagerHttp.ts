@@ -81,7 +81,7 @@ export class ProgramToolManagerHttp {
      * Returns a Promise that resolves with the final result.
      * Action logs and permission requests are handled via SSE events.
      */
-    static async invokeTool(call: { function?: string; arguments?: any }): Promise<any> {
+    static async invokeTool(call: { function?: string; arguments?: any }, id: string): Promise<any> {
         const functionName = call.function!;
         const [, module, method] = functionName.split('.');
         const entry = this.moduleInstances[module];
@@ -132,7 +132,7 @@ export class ProgramToolManagerHttp {
                             switch (lastEventName) {
                                 case 'action':
                                     // Forward action log to the stream
-                                    Stream.publish_event('llm', 'tool', {
+                                    Stream.publish_event('llm', id, {
                                         state: data,
                                         type: 'action_log',
                                     }).catch(() => {});

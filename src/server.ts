@@ -54,7 +54,8 @@ export class GneolServer {
                 const souls = allSouls.map(s => ({
                     id: s.id,
                     name: s.name,
-                    program: s.program
+                    program: s.program,
+                    programPath: s.programPath
                 }));
                 const offset = (page - 1) * limit;
                 return souls.slice(offset, offset + limit);
