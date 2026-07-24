@@ -27,6 +27,7 @@ export class Soul {
     program: string;
     backstory: string;
     programPath: string;
+    traits: string[];
     llm: string;
     summary: string;
     parentId: string;
@@ -37,6 +38,7 @@ export class Soul {
     cachedTokens: number;
     _scid: string;
     messagesPath: string;
+    workSpace: string;
     private _messages: Message[] | null = null; /* In-memory cache; loaded lazily from file */
 
     constructor(config: {
@@ -54,6 +56,7 @@ export class Soul {
         outputTokens?: number;
         cachedTokens?: number;
         _scid?: string;
+        workSpace?: string;
         messagesPath?: string;
     }) {
         this.id = config.id ?? `gneol_soul_${randomUUID()}`;
@@ -70,6 +73,7 @@ export class Soul {
         this.cachedTokens = config.cachedTokens || 0;
         this._scid = config._scid || '';
         this.programPath = config.programPath || '';
+        this.workSpace = config.workSpace || '';
         this.messagesPath = config.messagesPath || path.join(MESSAGES_DIR, `${this.id}.json`);
     }
 
@@ -196,7 +200,7 @@ export class GlobalSoulStore {
     }
 
     /** Update a soul config */
-    update(id: string, updates: Partial<Pick<Soul, 'name' | 'program' | 'llm' | 'summary' | 'backstory' | 'parentId' | 'notes' | 'attachments' | 'inputTokens' | 'outputTokens' | 'cachedTokens' | '_scid'>>): Soul | undefined {
+    update(id: string, updates: Partial<Pick<Soul, 'name' | 'program' | 'llm' | 'summary' | 'backstory' | 'parentId' | 'notes' | 'attachments' | 'inputTokens' | 'outputTokens' | 'cachedTokens' | '_scid' | 'traits' | 'workSpace'>>): Soul | undefined {
         const existing = this.cache.get(id);
         if (!existing) return undefined;
 

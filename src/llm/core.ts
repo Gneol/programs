@@ -237,7 +237,7 @@ const _detect_token_excess = (response: TaskResponse, notes: string[], chat: Sou
     // console.log(max_tokens, tokenUsage, inputTokens, "TOKENS USAGE");
     Stream.publish_event('llm', chat.id, {
         type: 'sub_state',
-        state: `${model.name} - ${format_token_to_string(inputTokens)} \n\t- in:${format_token_to_string(chat.inputTokens)} out:${format_token_to_string(chat.outputTokens)} cached:${format_token_to_string(chat.cachedTokens)}`
+        state: `${model.name} - ${format_token_to_string(inputTokens)}`
     })
 
     const excess_notes = _detect_note_excess(notes);

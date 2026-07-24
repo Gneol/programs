@@ -308,6 +308,7 @@ export class GneolServer {
         })
     })
     async chat(id: string, message: string) {
+        console.log('Sent message to ', id, 'message:', `"${message}"`)
         const ctx = ttc.requestContext(arguments);
         const store = getGlobalSoulStore();
         const soul = store.get(id);

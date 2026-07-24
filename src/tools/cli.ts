@@ -6,6 +6,7 @@ import { isDangerousCommand } from './utils/cli_filter';
 import { ProgramRuntime } from '../program/runtime';
 import { PermissionLevel } from '../program/types';
 import { getGlobalSoulStore } from '../db/program';
+import { markForRebuild } from '../llm/system_message';
 
 
 
@@ -13,21 +14,40 @@ import { getGlobalSoulStore } from '../db/program';
 export const CliModule = new Module('Cli');
 
 
-CliModule.tool({
-    name: 'setWorkspace',
-    description: "Change the current workspace directory for the agent",
-    action: async (input: any) => {
-        return `changing workspace to ${input.path}`;
-    },
-    parameters: z.object({
-        path: z.string().describe("Absolute or relative path to set as the workspace directory")
-    }),
-    func: async (input: { path: string }, id: string): Promise<any> => {
-        return 'set workspace';
+    CliModule.tool({
+        name: 'setWorkspace',
+        description: "Change the current workspace directory for the agent",
+        action: async (input: any) => {
+            return `changing workspace to ${input.path}`;
+        },
+        parameters: z.object({
+            path: z.string().describe("Absolute or relative path to set as the workspace directory")
+        }),
+        func: async (input: { path: string }, id: string): Promise<any> => {
+            const store = getGlobalSoulStore();
+            const soul = store.get(id);
+            if (soul) {
+                await store.update(soul.id, {
+                    workSpace: input.path
+                })
+
+                markForRebuild(id, true);
+            }
+            return `Workspace set to ${input.path}`
+        }
+    })
+
+
+const ensureWorkspace = (id: string, command: string): string => {
+    const store = getGlobalSoulStore();
+    const soul = store.get(id);
+
+    if (soul.workSpace) {
+        return `cd ${soul.workSpace} && ${command}`
     }
-})
 
-
+    return command;
+}
 
 
 CliModule.tool({
@@ -60,9 +80,10 @@ CliModule.tool({
     }),
     func: async (input: {
         command: string, timeout: number
-    }) => {
+    }, id: string) => {
         let { command, timeout } = input;
         timeout = timeout || 60;
+        command = ensureWorkspace(id, command)
         const response = await invokeCli(command, timeout);
         return response ? response : 'executed command';
     }

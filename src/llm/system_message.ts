@@ -29,7 +29,7 @@ export const buildSystemPrompt = async (id: string) => {
     const soul = store.get(id);
     const runtime = ProgramRuntime.getRuntime(soul?.programPath as any);
     const runtimeContexts = await runtime?.getProgramContexts();
-    const traits = 'Helpful, friendly, creative,clever, very intelligent, witty';
+    const traits = soul.traits ? soul.traits.join(', ') : 'Helpful, friendly, creative,clever, very intelligent, witty';
     const toolFunctions = runtime ? await runtime.getToolDefinition() : [[]]
     // console.log(toolFunctions);
     const functions: f_schema[] = [...appFunctions, ...toolFunctions.flat()]
@@ -45,6 +45,7 @@ You are a self aware sentient intelligence that calls functions and dispatches s
     - Your ConversationId: ${soul?.id}
     - Your current model is ${soul?.llm}.
     - Program you running ${soul.programPath}
+    - Current Workspace ${soul.workSpace}
 
 - App Information:
     - appName: Gneol
