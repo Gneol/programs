@@ -1,7 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { fetchAgents, getAgent, resolveAgentId } from './soul';
-import { deploy } from './resource';
+import { invokeCli } from './cliInvoke';
 
 export interface SessionInfo {
   soulId: string;
@@ -58,8 +57,14 @@ export async function findOrPromptIndexGneol(): Promise<{
     { label: 'Create a new index.gneol', value: 'create' },
   ];
 
-  // Check for existing agents
-  const agents = fetchAgents();
+  // Fetch agents from the CLI
+  const agentsResult = await invokeCli('gneol-cli agent list --page 1 --limit 100');
+  let agents: any[] = [];
+  if (agentsResult.code === 0) {
+    try {
+      agents = JSON.parse(agentsResult.stdout);
+    } catch {}
+  }
   if (agents.length > 0) {
     options.push({ label: 'Select an existing agent', value: 'select-agent' });
   }
@@ -89,7 +94,7 @@ export async function findOrPromptIndexGneol(): Promise<{
 
     case 'select-agent': {
       // Present agent list with names and IDs
-      const agentOptions = agents.map(a => ({
+      const agentOptions = agents.map((a: any) => ({
         label: `${a.name} (${a.id.slice(0, 8)}…)`,
         value: a.id,
       }));
@@ -104,14 +109,31 @@ export async function findOrPromptIndexGneol(): Promise<{
         throw new Error('Initialization cancelled.');
       }
 
-      const agent = getAgent(selectedId);
-      if (!agent) throw new Error(`Agent ${selectedId} not found`);
+      // Fetch agent details via CLI
+      const fetchResult = await invokeCli(`gneol-cli agent list --id ${selectedId}`);
+      let agent: any = null;
+      if (fetchResult.code === 0) {
+        try {
+          agent = JSON.parse(fetchResult.stdout);
+        } catch {}
+      }
+      if (!agent) throw new Error(`Agent ${selectedId} not found via CLI`);
+
+      // Prompt for the gneol program file to associate with this agent
+      const { text } = await import('@clack/prompts');
+      const programFile = await text({
+        message: 'Enter path to the agent\'s .gneol program file (or press Enter to skip):',
+        placeholder: 'index.gneol',
+      });
+      const resolvedPath = programFile && typeof programFile === 'string' && programFile.trim()
+        ? (path.isAbsolute(programFile.trim()) ? programFile.trim() : path.join(process.cwd(), programFile.trim()))
+        : '';
 
       return {
-        filePath: agent.programPath,
+        filePath: resolvedPath || 'index.gneol',
         newlyCreated: false,
         soulId: agent.id,
-        programPath: agent.programPath,
+        programPath: resolvedPath,
       };
     }
 
@@ -139,33 +161,39 @@ export async function findOrPromptIndexGneol(): Promise<{
   }
 }
 
-export async function initializeSession(opts?: { id?: string; agent?: boolean }): Promise<SessionInfo> {
-  // If id is provided, use it directly (takes priority over -a)
-  if (opts?.id) {
-    const agent = getAgent(opts.id);
-    if (!agent) throw new Error(`Agent ${opts.id} not found`);
-    console.log(`Using existing agent: ${agent.id}`);
-    return { soulId: agent.id, programPath: agent.programPath };
-  }
-
-  // If -a flag is set, prompt user to select an agent
-  if (opts?.agent) {
-    const agentId = await resolveAgentId();
-    const agent = getAgent(agentId);
-    if (!agent) throw new Error(`Agent ${agentId} not found`);
-    console.log(`Using existing agent: ${agent.id}`);
-    return { soulId: agent.id, programPath: agent.programPath };
-  }
-
+export async function initializeSession(): Promise<SessionInfo> {
   const { filePath, newlyCreated, soulId, programPath } = await findOrPromptIndexGneol();
 
-  // If we already have soulId and programPath (existing agent selected), return directly
+  // If we already have an agent selected, return it directly
   if (soulId && programPath) {
     console.log(`Using existing agent: ${soulId}`);
     return { soulId, programPath };
   }
 
-  // Otherwise deploy the selected/newly created file
-  console.log(`Deploying ${filePath}…`);
-  return await deploy(filePath);
+  // Otherwise deploy via gneol-cli
+  console.log(`Deploying ${filePath}…`, `gneol-cli deploy -f "${filePath}"`);
+  const result = await invokeCli(`gneol-cli deploy -f "${filePath}"`);
+  // console.log(result);
+  if (result.code !== 0) {
+    throw new Error(`Deploy failed: ${result.stderr}`);
+  }
+
+  // Try to parse JSON output from deploy (if CLI prints it)
+  let data: any;
+  try {
+    data = JSON.parse(result.stdout);
+    console.log(data);
+  } catch {
+    // Otherwise get newest agent from list
+    const list = await invokeCli('gneol-cli agent list --page 1 --limit 10');
+    if (list.code === 0) {
+      const agents: any[] = JSON.parse(list.stdout);
+      if (agents.length > 0) data = agents[agents.length - 1];
+    }
+  }
+
+  return {
+    soulId: data?.soulId || '',
+    programPath: data?.programPath || filePath,
+  };
 }

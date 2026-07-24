@@ -44,7 +44,7 @@ export class ProgramRuntime {
         const resolvedPath = fspath.resolve(filePath);
         if (!fs.existsSync(resolvedPath)) throw new Error(`File not found: ${resolvedPath}`);
 
-        const content = fs.readFileSync(resolvedPath, 'utf-8');
+        // const content = fs.readFileSync(resolvedPath, 'utf-8');
         const program = parseGneolFile(resolvedPath);
 
         // Resolve env files for this program
@@ -276,7 +276,7 @@ export class ProgramRuntime {
             const runtime = ProgramRuntime.NeuralCore.get(fspath.resolve(soul.programPath));
             if (runtime) runtime.agentId = soul.id;
             await runtime.handleToolDefinitions(runtime.program);
-            console.log(`Loaded soul "${soul.id}" → program "${result.title}"`);
+            // console.log(`Loaded soul "${soul.id}" → program "${result.title}"`);
         } catch (err: any) {
             console.warn(`Failed to load soul "${soul.id}": ${err.message}`);
         }
@@ -291,7 +291,6 @@ export class ProgramRuntime {
         await Promise.all(souls.map(async (soul) => {
             try {
                 await this.loadFromSoul(soul);
-                console.log(soul.programPath);
                 const resolvedPath = soul.programPath ? fspath.resolve(soul.programPath) : '';
                 const runtime = ProgramRuntime.NeuralCore.get(resolvedPath);
                 if (runtime) {

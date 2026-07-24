@@ -35,6 +35,7 @@ Internal.tool({
             programPath: parent.programPath,
             llm: parent.llm,
             notes: [],
+            _scid: parent._scid,
             parentId: parent.id,
             backstory: input.backstory
         });

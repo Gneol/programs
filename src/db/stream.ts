@@ -63,7 +63,7 @@ export class Stream {
 
     static publish_event = async (event: TTCEvents, agent_id: string, data: any) => {
         try {
-            // console.log(event, data, scid);
+            // console.log(event, data, agent_id);
             await InvokeEngine.emit(agent_id, event as any, data);
         } catch (error) {
             console.error('Error publishing event:', error);

@@ -371,10 +371,10 @@ export class RPCClient {
         /**
          * approve permission
          *
-         * @param {pId: any, state: any, message: any}
+         * @param {pId: string, state: boolean, message: string}
          * @returns {Promise<rpcResponseType<any>>}
          */
-        async approveFunction(pId: any, state: any, message: any): Promise<rpcResponseType<any>> {
+        async approveFunction(pId: string, state: boolean, message: string): Promise<rpcResponseType<any>> {
             return await RPCClient.apiCallback('GneolServer.approveFunction', [pId, state, message]);
         },
         /**

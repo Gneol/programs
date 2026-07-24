@@ -59,7 +59,7 @@ export class ProgramToolManager {
             try {
                 const { moduleName, definitions } = await WorkerManager.addTool(agentId, scriptPath);
                 moduleOwner.set(moduleName, 'worker');
-                console.log(definitions)
+                // console.log(definitions)
                 scriptMap[scriptPath] = this.removeCollition(definitions);
                 return definitions;
             } catch (error) {

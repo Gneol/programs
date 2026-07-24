@@ -93,7 +93,7 @@ export function parseGneol(content: string, path: string = ''): GneolProgram {
  */
 export function parseGneolFile(filePath: string): GneolProgram {
     const mergedContent = mergeImports(filePath);
-    console.log(filePath)
+    // console.log(filePath)
     return parseGneol(mergedContent, filePath);
 }
 

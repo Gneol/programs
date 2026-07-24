@@ -18,7 +18,7 @@ export class OpenRouter {
 
   constructor(config: OpenRouterConfig) {
     this.config = config;
-    console.log(JSON.stringify(this.config, null, 2))
+    // console.log(JSON.stringify(this.config, null, 2))
     this.client = new OpenAI({
       apiKey: config.apiKey,
       baseURL: 'https://openrouter.ai/api/v1',

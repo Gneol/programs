@@ -8,15 +8,16 @@ import { appInvokationHandler, onAuthEvent } from "./tools/index.js";
 import { ProgramToolManager } from "./tools/utils/ProgramToolManager.js";
 import { invokationEngine } from "./llm/invoke.js";
 import { Stream } from "./db/stream.js";
+import { llm_message_internal } from "./llm/utils/types.js";
 
 
 export class GneolServer {
 
 
-    constructor(){
+    constructor() {
         ProgramRuntime.init();
-        appInvokationHandler.on('auth', async (arg)=>onAuthEvent(arg, 'user'))
-        appInvokationHandler.on('action', async (arg)=>{
+        appInvokationHandler.on('auth', async (arg) => onAuthEvent(arg, 'user'))
+        appInvokationHandler.on('action', async (arg) => {
             Stream.publish_event('action_log', arg.id, arg.action);
         })
     }
@@ -161,24 +162,94 @@ export class GneolServer {
     }
 
     @ttc.describe({
-        doc: 'get chat history for a soul with pagination',
+        param_index: 3,
+        doc: 'get chat history',
         parameterSchema: z.object({
             id: z.string(),
-            page: z.number().optional().default(1),
-            limit: z.number().optional().default(50)
-        })
+            limit: z.number(),
+            page: z.number()
+        }),
+        outputSchema: z.array(z.object({
+            role: z.string(),
+            content: z.string()
+        }))
     })
-    async history(id: string, page: number = 1, limit: number = 50) {
-        const store = getGlobalSoulStore();
-        const soul = store.get(id);
-        if (!soul) throw new Error(`Soul not found: ${id}`);
+    async history(id: string, limit: number, page: number) {
+        try {
+            const store = getGlobalSoulStore();
+            const soul = store.get(id);
+            if (!soul) throw new Error(`Soul not found: ${id}`);
 
-        const allMessages = soul.loadMessages();
-        // const total = allMessages.length;
-        const offset = (page - 1) * limit;
-        const messages = allMessages.slice(offset, offset + limit);
-        console.log(messages);
-        return messages || [];
+            const messages = soul.loadMessages();
+            // console.log(messages);
+            // Slice from the end to get the most recent messages, then reverse to show latest first
+
+            if (messages.length === 0) {
+                return [];
+            }
+
+            const start = -page * limit;
+            const end = -(page - 1) * limit || undefined; // If page=1, end=undefined to go to the end
+            const paginatedMessages = messages.slice(start, end).reverse();
+            // console.log('Fetched messages for conversation', conversation_id, 'page', page, 'limit', limit, paginatedMessages.length);
+            const history = await this.historyTransformation(paginatedMessages);
+            // console.log(history);
+            // check if the first message is a summary, remove it
+            if (history.length > 0 && history[0].content?.startsWith('[Summary]')) {
+                history.shift();
+            }
+
+            // console.log(history)
+            return history;
+        } catch (error) {
+            console.log(error);
+        }
+    }
+
+    async historyTransformation(history: llm_message_internal[]) {
+        const finalHistory = history.map(msg => {
+
+            const role = msg.role;
+            let content = msg.content;
+
+            if (role === 'assistant') {
+                try {
+                    if (content.includes('```json')) {
+                        // remove the ```json and ``` from the content
+                        content = content.replace(/```json/g, '').replace(/```/g, '').trim();
+                    }
+                    const parsedContent = JSON.parse(content);
+                    // console.log('Parsed assistant message:', parsedContent);
+                    let finalContent = '';
+                    for (const item of parsedContent) {
+                        if (item.function === 'Internal.speakToUser') {
+                            finalContent += item.arguments.message;
+                            // console.log('Transformed assistant message to user message:', content);
+                        }
+                    }
+                    content = finalContent;
+                } catch (error) {
+                    console.error('Error parsing assistant message:', error);
+                    content = msg.content; // Fallback to original content
+                }
+            } else if (role === 'user') {
+                // if it is function response we do not need that shit
+                try {
+                    JSON.parse(content);
+                    content = null;
+                } catch (error) {
+                    // not json so it is a normal user message
+                    content = msg.content;
+                }
+            }
+
+            return {
+                role: role,
+                content
+            }
+        }).filter(msg => msg.content !== null && msg.content !== "");
+
+        return finalHistory.reverse();
     }
 
     @ttc.describe({
@@ -208,7 +279,7 @@ export class GneolServer {
         return 'trigger sent';
     }
 
-    
+
 
     @ttc.describe({
         doc: 'deploy a .gneol program file',
@@ -224,8 +295,8 @@ export class GneolServer {
         param_index: 3,
         doc: 'approve permission'
     })
-    async approveFunction(pId: string, state: boolean, message: string){
-        await invokationEngine.approveFunction({pId, state, message});
+    async approveFunction(pId: string, state: boolean, message: string) {
+        await invokationEngine.approveFunction({ pId, state, message });
     }
 
 
@@ -259,12 +330,19 @@ export class GneolServer {
     }
 }
 
-const app = express();
-ttc.init({
-    app,
-    modules: [GneolServer],
-    generate_client: true,
-    async socketCb(socket) {
-        console.log(`${socket.id} connected...`)
-    },
-}).listen(3999);
+export function startServer(options?: { port?: number; daemonize?: boolean }) {
+    const app = express();
+    ttc.init({
+        app,
+        modules: [GneolServer],
+        // generate_client: true,
+        async socketCb(socket) {
+            console.log(`${socket.id} connected...`)
+        },
+    }).listen(options?.port || 3999);
+    if (options?.daemonize) {
+        console.log('Server started on port ' + (options?.port || 3999));
+    } else {
+        console.log('Server listening on port ' + (options?.port || 3999));
+    }
+}

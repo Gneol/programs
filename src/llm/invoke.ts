@@ -64,17 +64,18 @@ export class InvokeEngine {
                 }
             }
 
-            Stream.publish_event('llm', conversation_id, {
-                state: 'idle'
-            })
             if (response) {
                 responses.push({
                     function: call.function as any,
                     response
                 })
             } else {
-
+                Stream.publish_event('llm', conversation_id, {
+                state: 'idle'
+            })
             }
+
+            await new Promise((resolve)=>setTimeout(resolve, 1000));
         }
 
         // console.log(responses)

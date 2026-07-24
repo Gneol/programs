@@ -2,27 +2,37 @@
   "name": "gneol-programs",
   "version": "1.0.0",
   "description": "Gneol Program Running System",
-  "type": "commonjs",
+  "type": "module",
   "main": "dist/index.js",
   "bin": {
     "gneol-cli": "./dist/index.js"
   },
   "scripts": {
-    "build": "tsc",
-    "postbuild": "echo '#!/usr/bin/env node' > /tmp/shebang && cat dist/index.js >> /tmp/shebang && mv /tmp/shebang dist/index.js && chmod +x dist/index.js",
+    "build": "bun build ./src/index.ts --outdir ./dist --target node --banner \"#!/usr/bin/env node\"",
     "start": "node dist/index.js",
-    "dev": "tsc --watch"
+    "dev": "bun --watch src/index.ts",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@clack/prompts": "^1.7.0",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "body-parser": "^2.3.0",
+    "chalk": "^5.6.2",
     "commander": "^15.0.0",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "fullscreen-ink": "^0.1.0",
     "glob": "^13.0.6",
-    "gneol-sdk": "file:/Users/elijah/Desktop/ttcv2/gneol-sdk/gneol-sdk-0.3.9.tgz",
+    "gneol-sdk": "file:/Users/elijah/Desktop/ttcv2/gneol-sdk/gneol-sdk-0.4.0.tgz",
+    "html-to-text": "^9.0.5",
+    "ink": "^7.1.1",
+    "ink-markdown": "^1.0.4",
+    "ink-text-input": "^6.0.0",
+    "js-yaml": "^5.2.1",
     "jsonrepair": "^3.15.0",
     "openai": "^4.0.0",
+    "react": "^19.0.0",
+    "react-devtools-core": "^7.0.1",
     "ttc-rate-limit": "^0.1.17",
     "ttc-rpc": "^3.0.7",
     "zod": "^4.1.11"

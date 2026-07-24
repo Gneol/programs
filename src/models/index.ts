@@ -71,7 +71,7 @@ export async function ModelInstance(config: BaseModelConfig): Promise<ModelCache
   const llm = await createLLMInstance(config);
 
   const rateLimit = config.rateLimit ?? 20;
-  console.log('register .....')
+  // console.log('register .....')
 
   const rateLimiter = new RateLimiter<string, TaskResponse>({
     id: cacheKey,
@@ -140,7 +140,7 @@ export async function preloadModelsFromBindings(
     };
     try {
       await ModelInstance(config);
-      console.log(`Pre‑cached model "${binding.tag}" (${binding.provider}:${binding.modelId})`);
+      // console.log(`Pre‑cached model "${binding.tag}" (${binding.provider}:${binding.modelId})`);
     } catch (err: any) {
       console.warn(`Failed to pre‑cache model "${binding.tag}": ${err.message}`);
     }

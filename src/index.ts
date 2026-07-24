@@ -167,9 +167,12 @@ import { launchTerminal } from './cli-utils/terminal.js';
 program
   .command('init')
   .description('Initialize a Gneol session in the current directory')
-  .action(async () => {
+  .option('-i, --id <id>', 'The agent id')
+  .option('-a, --agent', 'List and select an existing agent')
+  .action(async (opts: any) => {
     try {
-      const { soulId, programPath } = await initializeSession();
+      const { soulId, programPath } = await initializeSession({ id: opts.id, agent: opts.agent });
+      // program should be deployed
       await launchTerminal(soulId, programPath);
     } catch (err: any) {
       console.error(err.message);
@@ -179,31 +182,41 @@ program
 
 // ─── Start Server ───
 
+import { startServer } from './server.js';
+import { execDetached } from './tools/utils/cliInvoke.js';
+
 program
   .command('start')
-  .description('Start the Gneol server in background')
-  .action(() => {
-    const { spawn } = require('child_process');
-    const child = spawn('node', [require('path').join(__dirname, 'server.js')], {
-      detached: true,
-      stdio: 'ignore'
-    });
-    child.unref();
-    console.log('Server started in background.');
+  .description('Start the Gneol server (use --daemonize to run in background)')
+  .option('-d, --daemonize', 'Run server in background and detach')
+  .option('-p, --port <port>', 'Port to listen on', parseInt)
+  .action(async (opts: { daemonize?: boolean; port?: number }) => {
+    if (opts.daemonize) {
+      // Re-invoke without --daemonize in detached mode
+      const cmd = `gneol-cli start ${opts.port ? '-p ' + opts.port : ''}`;
+      execDetached(cmd);
+      console.log('Server started in background.');
+      process.exit(0);
+    } else {
+      startServer({ port: opts.port });
+    }
   });
 
 // ─── Stop Server ───
+
+import { execSync } from 'child_process';
 
 program
   .command('stop')
   .description('Stop the Gneol server')
   .action(() => {
     try {
-      require('child_process').execSync('kill $(lsof -t -i:3999)', { stdio: 'ignore' });
+      execSync('kill $(lsof -t -i:3999)', { stdio: 'ignore' });
       console.log('Server stopped.');
     } catch {
       console.log('Server not running or could not be stopped.');
     }
+    process.exit(0)
   });
 
 export default program;
