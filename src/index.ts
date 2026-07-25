@@ -2,8 +2,11 @@ import fs from 'fs';
 import path from 'path';
 import { Command } from 'commander';
 import { getTemplate, resources } from './program/template.js';
-import { resourceAction, approveFunction, deploy, convert, deleteAgent } from './cli-utils/resource.js';
-import { api } from './cli-utils/api.js';
+import { resourceAction, deploy, convert, deleteAgent } from './cli-utils/resource.js';
+import { startServer } from './server.js';
+import { execDetached } from './tools/utils/cliInvoke.js';
+import { execSync } from 'child_process';
+import { startChat } from './terminal/interface/chat.js';
 
 const program = new Command();
 
@@ -97,23 +100,6 @@ if (agentCmd) {
     });
 }
 
-// ─── Approve Permission ───
-
-program
-  .command('approve')
-  .description('Approve or reject a function permission request')
-  .requiredOption('-i, --id <id>', 'The function request ID')
-  .option('-y, --yes', 'Approve the request (default)')
-  .option('-n, --no', 'Reject the request')
-  .action(async (opts: { id: string; yes?: boolean; no?: boolean }) => {
-    const state = opts.no ? false : true;
-    try {
-      await approveFunction(opts.id, state);
-      process.exit(0)
-    } catch (err: any) {
-      console.error(err.message);
-    }
-  });
 
 // ─── Deploy ───
 
@@ -162,7 +148,6 @@ program
 // ─── Init (default) ───
 
 import { initializeSession } from './cli-utils/init.js';
-import { launchTerminal } from './cli-utils/terminal.js';
 
 program
   .command('init')
@@ -171,19 +156,16 @@ program
   .option('-a, --agent', 'List and select an existing agent')
   .action(async (opts: any) => {
     try {
-      const { soulId, programPath } = await initializeSession({ id: opts.id, agent: opts.agent });
+      const { soulId, programPath, name } = await initializeSession({ id: opts.id, agent: opts.agent });
       // program should be deployed
-      await launchTerminal(soulId, programPath);
+      await startChat(soulId, name, programPath);
     } catch (err: any) {
       console.error(err.message);
       process.exit(1);
     }
   });
 
-// ─── Start Server ───
-
-import { startServer } from './server.js';
-import { execDetached } from './tools/utils/cliInvoke.js';
+  // ─── Start Server ───
 
 program
   .command('start')
@@ -204,7 +186,6 @@ program
 
 // ─── Stop Server ───
 
-import { execSync } from 'child_process';
 
 program
   .command('stop')

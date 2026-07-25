@@ -342,13 +342,13 @@ export class RPCClient {
             return await RPCClient.apiCallback('GneolServer.list', [resource, page, limit, id]);
         },
         /**
-         * get chat history for a soul with pagination
+         * get chat history
          *
-         * @param {id: string, page: number, limit: number}
-         * @returns {Promise<rpcResponseType<any>>}
+         * @param {id: string, limit: number, page: number}
+         * @returns {Promise<rpcResponseType<{ role: string; content: string }[]>>}
          */
-        async history(id: string, page: number, limit: number): Promise<rpcResponseType<any>> {
-            return await RPCClient.apiCallback('GneolServer.history', [id, page, limit]);
+        async history(id: string, limit: number, page: number): Promise<rpcResponseType<{ role: string; content: string }[]>> {
+            return await RPCClient.apiCallback('GneolServer.history', [id, limit, page]);
         },
         /**
          * trigger an agent with a message (for schedules/automations)
@@ -376,6 +376,15 @@ export class RPCClient {
          */
         async approveFunction(pId: string, state: boolean, message: string): Promise<rpcResponseType<any>> {
             return await RPCClient.apiCallback('GneolServer.approveFunction', [pId, state, message]);
+        },
+        /**
+         * set workspace for agent
+         *
+         * @param {id: string, workSpace: string}
+         * @returns {Promise<rpcResponseType<any>>}
+         */
+        async setWorkspace(id: string, workSpace: string): Promise<rpcResponseType<any>> {
+            return await RPCClient.apiCallback('GneolServer.setWorkspace', [id, workSpace]);
         },
         /**
          * chat an agent

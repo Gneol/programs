@@ -20,14 +20,9 @@ export async function resourceAction(
   }
 }
 
-/** Approve or reject a function permission request */
-export async function approveFunction(id: string, state: boolean): Promise<void> {
-  // TODO: implement approve endpoint on server
-  console.log(`Function ${id} ${state ? 'approved' : 'rejected'}`);
-}
 
 /** Deploy a .gneol program to the server */
-export async function deploy(filePath: string): Promise<{ soulId: string; programPath: string }> {
+export async function deploy(filePath: string): Promise<{ soulId: string; programPath: string, name: string }> {
   const resolvedPath = path.resolve(filePath);
   if (!fs.existsSync(resolvedPath)) {
     throw new Error(`File not found: ${resolvedPath}`);
@@ -39,7 +34,7 @@ export async function deploy(filePath: string): Promise<{ soulId: string; progra
   const result = res.data;
   // console.log(`Deployed: ${result.title}`);
   // console.log(`Memory ID: ${result.soulId}`);
-  return { soulId: result.soulId, programPath: resolvedPath };
+  return { soulId: result.soulId, programPath: resolvedPath, name: result.name };
 }
 
 /** Convert .gneol to/from JSON/YAML */

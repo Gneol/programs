@@ -1,25 +1,25 @@
 // ============================================================================
-// Parser: sentinel() directive — sentinel("name").model("tag").id("...").description("...")
-// and sentinel().model() for wildcard
+// Parser: subagent() directive — subagent("name").model("tag").id("...").description("...")
+// and subagent().model() for wildcard
 // ============================================================================
 
-import { SentinelDeclaration } from '../types';
+import { SubagentDeclaration } from '../types';
 
 /**
- * Extract sentinel declarations from content.
- * Each sentinel directive may include .model(), .id(), and .description() sub-functions.
- * Wildcard sentinel() gets captured with name='' (empty string).
+ * Extract subagent declarations from content.
+ * Each subagent directive may include .model(), .id(), and .description() sub-functions.
+ * Wildcard subagent() gets captured with name='' (empty string).
  */
-export function parseSentinels(content: string): {
-    sentinelDeclarations: SentinelDeclaration[];
+export function parseSubagents(content: string): {
+    subagentDeclarations: SubagentDeclaration[];
     wildcardModel?: string;
     filteredContent: string;
 } {
-    const sentinelDeclarations: SentinelDeclaration[] = [];
+    const subagentDeclarations: SubagentDeclaration[] = [];
     let wildcardModel: string | undefined;
 
-    // Match entire sentinel line including all sub-function calls
-    const blockPattern = /(?:^|\n)\s*sentinel(?:\("([^"]*)"\)|\(\))((?:\s*\.\w+\("[^"]*"\))*)/g;
+    // Match entire subagent line including all sub-function calls
+    const blockPattern = /(?:^|\n)\s*(?:subagent|sentinel)(?:\("([^"]*)"\)|\(\))((?:\s*\.\w+\("[^"]*"\))*)/g;
     let match;
     let filteredContent = content;
 
@@ -37,10 +37,10 @@ export function parseSentinels(content: string): {
         const description = descMatch ? descMatch[1] : undefined;
 
         if (!name && model) {
-            // Wildcard sentinel
+            // Wildcard subagent
             wildcardModel = model;
         } else {
-            sentinelDeclarations.push({
+            subagentDeclarations.push({
                 name,
                 model,
                 id,
@@ -52,8 +52,9 @@ export function parseSentinels(content: string): {
     // Remove all matched lines from content
     filteredContent = filteredContent.replace(blockPattern, '');
 
-    return { sentinelDeclarations, wildcardModel, filteredContent };
+    return { subagentDeclarations, wildcardModel, filteredContent };
 }
 
-// Keep old name for backward compatibility — re-export under original name
-export const parseSentinelModels = parseSentinels;
+// Re-export under original name for backward compatibility
+export const parseSentinelModels = parseSubagents;
+export const parseSentinels = parseSubagents;

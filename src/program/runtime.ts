@@ -7,6 +7,7 @@ import fs from 'fs';
 import { stripFunctionCalls } from '../llm/utils/stripUtils';
 import * as fspath from 'path';
 import { Action, GneolProgram, IfExecType } from './types';
+import { applySubagents, resolveSubagentRef } from './applySubagents';
 import { getGlobalSoulStore, Soul } from '../db/program';
 import { cacheEngine, ModelInstance, preloadModelsFromBindings } from '../models';
 import { ProgramToolManager } from '../tools/utils/ProgramToolManager';
@@ -29,37 +30,22 @@ export class ProgramRuntime {
     constructor(agentId: string, program: GneolProgram, envStore?: Record<string, string>) {
         this.agentId = agentId;
         this.program = program;
-        if (envStore) {
-            this.envStore = envStore;
-        } else {
-            this.resolveEnvFiles(program);
-        }
+        this.envStore = envStore ?? ProgramRuntime.resolveEnv(program);
         this.eventBucket = new GneolEventBucket(this.eventBucketCallback);
         this.stripEvents(program);
         this.intervalId = setInterval(async () => await this.tick(), 1000);
     }
 
     // ── Static: One-stop deploy :: parse → env → soul → models → runtime ──
-    static async deployProgram(filePath: string, agentId?: string): Promise<{ title: string; soulId: string }> {
+    static async deployProgram(filePath: string, agentId?: string): Promise<{ title: string; soulId: string, name: string }> {
         const resolvedPath = fspath.resolve(filePath);
         if (!fs.existsSync(resolvedPath)) throw new Error(`File not found: ${resolvedPath}`);
 
         // const content = fs.readFileSync(resolvedPath, 'utf-8');
         const program = parseGneolFile(resolvedPath);
 
-        // Resolve env files for this program
-        const programDir = fspath.dirname(resolvedPath);
-        let envStore: Record<string, string> = {};
-        if (program.env !== undefined) {
-            let envFileToLoad: string | undefined;
-            if (program.env === '') {
-                const defaultEnv = fspath.join(programDir, '.env');
-                if (fs.existsSync(defaultEnv)) envFileToLoad = defaultEnv;
-            } else {
-                envFileToLoad = program.env.startsWith('/') ? program.env : fspath.join(programDir, program.env);
-            }
-            if (envFileToLoad) envStore = parseEnvFile(envFileToLoad, envStore);
-        }
+        // Resolve env files for this program — uses the same static method
+        const envStore = ProgramRuntime.resolveEnv(program);
 
         // Reuse existing runtime or create a new one (keyed by resolved path)
         let runtime = ProgramRuntime.NeuralCore.get(resolvedPath);
@@ -72,19 +58,32 @@ export class ProgramRuntime {
 
         // Create / find a root soul for this program
         const store = getGlobalSoulStore();
-        const rootSoulName = `root:${program.title}`;
-        let rootSoul = store.list().find(s => s.name === rootSoulName);
+        let rootSoul = store.list().find(s => s.programPath === filePath && !s.parentId);
         if (!rootSoul) {
             rootSoul = store.create({
-                name: rootSoulName,
+                name: 'parentAgent',
                 programPath: program.path,
                 program: program.title,
                 llm: program.parentModel || '',
-                notes: []
+                notes: [],
+                workSpace: program.path
             });
         } else if (rootSoul.llm !== program.parentModel) {
             // Update the soul's llm tag when the program header model changes
             rootSoul = store.update(rootSoul.id, { llm: program.parentModel || '' });
+        }
+
+        console.log(agentId, filePath, rootSoul.name);
+        // Apply subagent declarations from the program
+        applySubagents(program, rootSoul.id);
+
+        // Resolve subagent references in actions (name → id) early, so runtime never sees names
+        for (const action of program.actions) {
+            if (action.subagent) {
+                console.log('resolving sub agent id', action.subagent)
+                action.subagent = resolveSubagentRef(action.subagent, rootSoul.id) ?? undefined;
+                console.log('resolved to ', action.subagent)
+            }
         }
 
         // Validate that parentModel tag has a binding (or already cached via a prior deployment)
@@ -109,7 +108,7 @@ export class ProgramRuntime {
             console.warn(`Model preload warning for "${program.title}": ${err.message}`);
         }
 
-        return { title: program.title, soulId: rootSoul.id };
+        return { title: program.title, soulId: rootSoul.id, name: rootSoul.name };
     }
 
     handleToolDefinitions = async (program: GneolProgram) => {
@@ -127,16 +126,8 @@ export class ProgramRuntime {
     }
 
     eventBucketCallback = async (action, message) => {
-        if (action.sentinel) {
-            const store = getGlobalSoulStore();
-            const sentinel = await store.get(action.sentinel);
-            if (sentinel) {
-                await this.trigger(message, sentinel.id);
-            } else {
-                console.warn(`Sentinel '${action.sentinel}' not found for event '${action.marker}' — falling back to parent`);
-                const fallbackMsg = `⚠️ Event '${action.marker}' attempted to dispatch to sentinel '${action.sentinel}' but it was not found. Falling back to parent.\n\nBucket Message: ${message}`;
-                await this.trigger(fallbackMsg);
-            }
+        if (action.subagent) {
+            await this.trigger(message, action.subagent);
         } else {
             await this.trigger(message);
         }
@@ -151,12 +142,10 @@ export class ProgramRuntime {
         })
     }
 
-    resolveEnvFiles = (program: GneolProgram) => {
+    static resolveEnv(program: GneolProgram): Record<string, string> {
         const programDir = program.path.substring(0, program.path.lastIndexOf('/'));
         let envFileToLoad: string | undefined;
-        // console.log(program.env)
         if (program.env !== undefined) {
-            // Empty string means auto-detect .env in same directory
             if (program.env === '') {
                 const defaultEnv = `${programDir}/.env`;
                 if (fs.existsSync(defaultEnv)) {
@@ -167,8 +156,9 @@ export class ProgramRuntime {
             }
         }
         if (envFileToLoad) {
-            this.envStore = parseEnvFile(envFileToLoad, this.envStore);
+            return parseEnvFile(envFileToLoad, {});
         }
+        return {};
     }
 
     formatAction(program: GneolProgram, action: Action): string {
@@ -206,8 +196,7 @@ export class ProgramRuntime {
 
     refresh = (program: GneolProgram, envStore?: Record<string, string>) => {
         this.program = program;
-        if (envStore) this.envStore = envStore;
-        else this.resolveEnvFiles(program);
+        this.envStore = envStore ?? ProgramRuntime.resolveEnv(program);
         this.stripEvents(program);
         this.eventBucket = new GneolEventBucket(this.eventBucketCallback);
         this.stripEvents(program);
@@ -284,7 +273,7 @@ export class ProgramRuntime {
 
     static async init() {
         const store = getGlobalSoulStore();
-        const souls = store.list();
+        const souls = store.list().filter(a => !a.parentId)
 
         this.isInitialized = true;
 
@@ -334,16 +323,8 @@ export class ProgramRuntime {
                 const isExecConditionGo = a.ifExec ? await this.isExecCondition_a_Go(a.ifExec) : true;
                 if (isConditionGo && isExecConditionGo) {
                     const msg = this.formatAction(this.program, a);
-                    if (a.sentinel) {
-                        const store = getGlobalSoulStore();
-                        const sentinel = await store.get(a.sentinel);
-                        if (sentinel) {
-                            await this.trigger(msg, sentinel.id);
-                        } else {
-                            console.warn(`Sentinel '${a.sentinel}' not found for program '${this.program.title}' — falling back to parent`);
-                            const fallbackMsg = `⚠️ Program '${this.program.title}' attempted to dispatch to sentinel '${a.sentinel}' but it was not found. Falling back to parent.\n\nOriginal message: ${msg}`;
-                            await this.trigger(fallbackMsg);
-                        }
+                    if (a.subagent) {
+                        await this.trigger(msg, a.subagent);
                     } else {
                         await this.trigger(msg);
                     }

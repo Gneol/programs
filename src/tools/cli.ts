@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import os from 'os';
 // import { current, getCliPermissionLevel } from "../utils/memory";
 import { invokeCli } from './utils/cliInvoke';
 import { Module } from 'gneol-sdk';
@@ -38,12 +39,23 @@ export const CliModule = new Module('Cli');
     })
 
 
+const normalizePath = (p: string): string => {
+    if (os.platform() === 'win32') {
+        return p.replace(/\//g, '\\');
+    }
+    return p;
+};
+
 const ensureWorkspace = (id: string, command: string): string => {
     const store = getGlobalSoulStore();
     const soul = store.get(id);
 
     if (soul.workSpace) {
-        return `cd ${soul.workSpace} && ${command}`
+        const ws = normalizePath(soul.workSpace);
+        if (os.platform() === 'win32') {
+            return `cd /d "${ws}" && ${command}`;
+        }
+        return `cd "${ws}" && ${command}`;
     }
 
     return command;

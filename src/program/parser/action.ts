@@ -106,9 +106,9 @@ export function parseActions(content: string, path: string): Action[] {
             }
         }
 
-        // Extract .sentinel("...")
-        const sentinelMatch = remainder.match(/\.sentinel\("((?:[^"\\]|\\.)*)"\)/);
-        const sentinel = sentinelMatch ? sentinelMatch[1] : undefined;
+        // Extract .subagent("...") [or .subagent(...) for backward compat]
+        const subagentMatch = remainder.match(/\.subagent\("((?:[^"\\]|\\.)*)"\)/) || remainder.match(/\.sentinel\("((?:[^"\\]|\\.)*)"\)/);
+        const subagent = subagentMatch ? subagentMatch[1] : undefined;
 
         // Extract all .resource("...")
         const resourceMatches = remainder.match(/\.resource\("((?:[^"\\]|\\.)*)"\)/g);
@@ -140,7 +140,7 @@ export function parseActions(content: string, path: string): Action[] {
 
         // Detect unknown directives
         const strippedForDirectives = remainder.replace(/".*?"/g, '').replace(/'[^']*'/g, '');
-        const knownDirectives = new Set(['.do', '.resource', '.max', '.maxSize', '.delay', '.modify', '.if', '.ifExec', '.text', '.sentinel', '.model', '.provider', '.modelId', '.apiKey']);
+        const knownDirectives = new Set(['.do', '.resource', '.max', '.maxSize', '.delay', '.modify', '.if', '.ifExec', '.text', '.sentinel', '.subagent', '.model', '.provider', '.modelId', '.apiKey']);
         const unknownDirs: string[] = [];
         const dirMatch = strippedForDirectives.match(/\.(\w+)\(/g);
         if (dirMatch) {
@@ -164,7 +164,7 @@ export function parseActions(content: string, path: string): Action[] {
             resources,
             condition,
             ifExec,
-            sentinel,
+            subagent,
             maxTrigger,
             initialMaxTrigger: maxTrigger,
             modify,

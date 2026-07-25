@@ -3,18 +3,7 @@ import path from 'path';
 import { glob } from 'glob';
 import { z } from 'zod';
 import { Module } from 'gneol-sdk';
-
-
-// ── Helper: strip workspace path from display paths ──
-const workspaceRoot = process.cwd();
-const workspaceParent = path.dirname(workspaceRoot);
-function displayPath(filePath: string): string {
-  if (filePath.startsWith(workspaceRoot)) {
-    return path.relative(workspaceParent, filePath);
-  }
-  return filePath;
-}
-
+import { resolveFilePath, displaySoulPath, resolveGlobPattern } from './pathUtils';
 
 // export class ttcFile {
 export const FileModule = new Module('File');
@@ -27,36 +16,35 @@ FileModule.tool({
     content: z.string().describe('Content to write to the file')
   }),
   output: z.string(),
-  action: async (input) => {
-    // const filename = input.filePath.split('/').pop();
-    return `Creating - ${displayPath(input.filePath)}`;
+  action: async (input, id: string) => {
+    return `Creating - ${displaySoulPath(input.filePath, id)}`;
   },
-  auth: async (inputData)=>{
-    if (await fs.stat(inputData.filePath).catch(() => false)) {
-      const tempPath = inputData.filePath + '.preview';
+  auth: async (inputData, id: string)=>{
+    const fullPath = resolveFilePath(inputData.filePath, id);
+    if (await fs.stat(fullPath).catch(() => false)) {
+      const tempPath = fullPath + '.preview';
       await fs.writeFile(tempPath, inputData.content, 'utf8');
       return `Requesting permission to recreate file ${inputData.filePath}, \n A preview has been saved to ${tempPath} — review it and approve or deny.`;
     }
     // return false;
   },
-  func: async (input: { filePath: string, content: string }) => {
-    const fullPath = input.filePath.startsWith('/') ? input.filePath : path.resolve(process.cwd(), input.filePath);
+  func: async (input: { filePath: string, content: string }, id: string) => {
+    const fullPath = resolveFilePath(input.filePath, id);
 
     // Remove preview temp file if it exists from auth
     await fs.unlink(fullPath + '.preview').catch(() => {});
 
     await fs.mkdir(path.dirname(fullPath), { recursive: true });
     await fs.writeFile(fullPath, input.content, 'utf8');
-    return `File created at ${displayPath(fullPath)}`;
+    return `File created at ${displaySoulPath(fullPath, id)}`;
   }
 });
 
 FileModule.tool({
   name: 'replace',
   description: 'Replaces all occurrences of a string in a file with a new string.',
-  action: async (input) => {
-    // const filename = input.filePath.split('/').pop();
-    return `Editing ${displayPath(input.filePath)}`;
+  action: async (input, id: string) => {
+    return `Editing ${displaySoulPath(input.filePath, id)}`;
   },
   parameters: z.object({
     filePath: z.string().describe('Path to the file to modify'),
@@ -65,7 +53,7 @@ FileModule.tool({
     useRegex: z.boolean().optional().describe('Whether oldString should be treated as a regular expression')
   }),
   output: z.string(),
-  func: async (input: { filePath: string; oldString: string; newString: string; useRegex?: boolean }) => {
+  func: async (input: { filePath: string; oldString: string; newString: string; useRegex?: boolean }, id: string) => {
 
     if(!input.oldString || input.oldString === ""){
       throw new Error('oldString is empty, please pass in a value for oldString')
@@ -75,7 +63,7 @@ FileModule.tool({
       input.useRegex = false;
     }
 
-    const fullPath = input.filePath.startsWith('/') ? input.filePath : path.resolve(process.cwd(), input.filePath);
+    const fullPath = resolveFilePath(input.filePath, id);
     let content = await fs.readFile(fullPath, 'utf8');
     if (!content.includes(input.oldString) && !input.useRegex) {
       throw new Error(`String '${input.oldString}' not found in file`);
@@ -89,7 +77,7 @@ FileModule.tool({
     }
     content = content.replace(pattern, input.newString);
     await fs.writeFile(fullPath, content, 'utf8');
-    return `Replaced in ${displayPath(fullPath)}`;
+    return `Replaced in ${displaySoulPath(fullPath, id)}`;
   }
 });
 
@@ -108,16 +96,18 @@ FileModule.tool({
     line: z.number(),
     content: z.string()
   })),
-  func: async (input: { globPattern: string; searchString: string }) => {
-    const files = await glob(input.globPattern);
+  func: async (input: { globPattern: string; searchString: string }, id: string) => {
+    const { pattern, cwd } = resolveGlobPattern(input.globPattern, id);
+    const files = await glob(pattern, { cwd });
     const results: Array<{ file: string; line: number; content: string }> = [];
     for (const file of files) {
-      const content = await fs.readFile(file, 'utf8');
+      const absFile = path.resolve(cwd, file);
+      const content = await fs.readFile(absFile, 'utf8');
       const lines = content.split('\n');
       lines.forEach((line, index) => {
         if (line.includes(input.searchString)) {
           results.push({
-            file: displayPath(file),
+            file: displaySoulPath(absFile, id),
             line: index + 1,
             content: line.trim()
           });
@@ -131,22 +121,21 @@ FileModule.tool({
 FileModule.tool({
   name: 'insertAtMarker',
   description: 'Inserts content after a line containing a marker string.',
-  action: async (input) => {
-    // const filename = input.filePath.split('/').pop();
-    return `inserting to ${displayPath(input.filePath)}`;
+  action: async (input, id: string) => {
+    return `inserting to ${displaySoulPath(input.filePath, id)}`;
   },
   parameters: z.object({
     filePath: z.string().describe('Path to the file to modify'),
     marker: z.string().describe('A unique string that identifies the line after which content will be inserted'),
     contentToInsert: z.string().describe('The content to insert after the marker line')
   }),
-  func: async (input: { filePath: string; marker: string; contentToInsert: string }) => {
+  func: async (input: { filePath: string; marker: string; contentToInsert: string }, id: string) => {
 
     if(!input.marker || input.marker === ""){
       throw new Error('marker is empty, please pass in a value for marker')
     }
 
-    const fullPath = input.filePath.startsWith('/') ? input.filePath : path.resolve(process.cwd(), input.filePath);
+    const fullPath = resolveFilePath(input.filePath, id);
     let fileContent = await fs.readFile(fullPath, 'utf8');
     const lines = fileContent.split('\n');
     const markerIndex = lines.findIndex(line => line.includes(input.marker));
@@ -156,22 +145,21 @@ FileModule.tool({
     lines.splice(markerIndex + 1, 0, input.contentToInsert);
     const newContent = lines.join('\n');
     await fs.writeFile(fullPath, newContent, 'utf8');
-    return `Inserted after marker '${input.marker}' in ${displayPath(fullPath)}`;
+    return `Inserted after marker '${input.marker}' in ${displaySoulPath(fullPath, id)}`;
   }
 })
 
 FileModule.tool({
   name: 'stats',
   description: 'Get file statistics: size, line count, modification time.',
-  action: async (input) => {
-    // const filename = input.filePath.split('/').pop();
-    return `scanning ${displayPath(input.filePath)}`;
+  action: async (input, id: string) => {
+    return `scanning ${displaySoulPath(input.filePath, id)}`;
   },
   parameters: z.object({
     filePath: z.string().describe('Path to the file to analyze')
   }),
-  func: async (input: { filePath: string }) => {
-    const fullPath = input.filePath.startsWith('/') ? input.filePath : path.resolve(process.cwd(), input.filePath);
+  func: async (input: { filePath: string }, id: string) => {
+    const fullPath = resolveFilePath(input.filePath, id);
     const stat = await fs.stat(fullPath);
     const content = await fs.readFile(fullPath, 'utf8');
     const lines = content.split('\n');
@@ -189,9 +177,8 @@ FileModule.tool({
 FileModule.tool({
   name: 'readSlice',
   description: 'Read a slice of a file between startLine and endLine (1‑based, inclusive).',
-  action: async (input) => {
-    // const filename = input.filePath.split('/').pop();
-    return `Reading lines ${input.startLine}‑${input.endLine} from ${displayPath(input.filePath)}`;
+  action: async (input, id: string) => {
+    return `Reading lines ${input.startLine}‑${input.endLine} from ${displaySoulPath(input.filePath, id)}`;
   },
   parameters: z.object({
     filePath: z.string().describe('Path to the file to read'),
@@ -208,9 +195,9 @@ FileModule.tool({
   func:
     async (input: {
         filePath: string; startLine: number; endLine: number
-    }) => {
+    }, id: string) => {
       let { filePath, startLine, endLine } = input;
-      const fullPath = filePath.startsWith('/') ? filePath : path.resolve(process.cwd(), filePath);
+      const fullPath = resolveFilePath(filePath, id);
       const content = await fs.readFile(fullPath, 'utf8');
       const lines = content.split('\n');
       if (startLine < 1) startLine = 1;
@@ -218,7 +205,7 @@ FileModule.tool({
       if (startLine > endLine) return [];
       const slice = lines.slice(startLine - 1, endLine);
       return {
-        file: displayPath(fullPath),
+        file: displaySoulPath(fullPath, id),
         startLine,
         endLine,
         totalLines: lines.length,

@@ -9,18 +9,12 @@ import { ProgramToolManager } from "./tools/utils/ProgramToolManager.js";
 import { invokationEngine } from "./llm/invoke.js";
 import { Stream } from "./db/stream.js";
 import { llm_message_internal } from "./llm/utils/types.js";
+import { markForRebuild } from "./llm/system_message.js";
 
 
 export class GneolServer {
 
 
-    constructor() {
-        ProgramRuntime.init();
-        appInvokationHandler.on('auth', async (arg) => onAuthEvent(arg, 'user'))
-        appInvokationHandler.on('action', async (arg) => {
-            Stream.publish_event('action_log', arg.id, arg.action);
-        })
-    }
 
     static getProgram(programName: string) {
         const runtime = ProgramRuntime.getRuntimeByTitle(programName);
@@ -56,12 +50,14 @@ export class GneolServer {
             case 'agent': {
                 const store = getGlobalSoulStore();
                 const allSouls = store.list();
-                const souls = allSouls.map(s => ({
-                    id: s.id,
-                    name: s.name,
-                    program: s.program,
-                    programPath: s.programPath
-                }));
+                const souls = allSouls
+                    .filter(s => !s.parentId)
+                    .map(s => ({
+                        id: s.id,
+                        name: s.name,
+                        program: s.program,
+                        programPath: s.programPath
+                    }));
                 const offset = (page - 1) * limit;
                 return souls.slice(offset, offset + limit);
             }
@@ -299,6 +295,19 @@ export class GneolServer {
         await invokationEngine.approveFunction({ pId, state, message });
     }
 
+    @ttc.describe({
+        param_index: 2,
+        doc: 'set workspace for agent'
+    })
+    async setWorkspace(id: string, workSpace: string) {
+        const store = getGlobalSoulStore();
+        await store.update(id, {
+            workSpace
+        });
+        await markForRebuild(id, true);
+        return 'workspace set'
+    }
+
 
     @ttc.describe({
         doc: 'chat an agent',
@@ -332,6 +341,13 @@ export class GneolServer {
 }
 
 export function startServer(options?: { port?: number; daemonize?: boolean }) {
+
+    ProgramRuntime.init();
+    appInvokationHandler.on('auth', async (arg) => onAuthEvent(arg, 'user'))
+    appInvokationHandler.on('action', async (arg) => {
+        Stream.publish_event('action_log', arg.id, arg.action);
+    })
+
     const app = express();
     ttc.init({
         app,

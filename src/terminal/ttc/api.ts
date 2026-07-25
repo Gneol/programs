@@ -71,12 +71,11 @@ export class Assistant {
         return { status: 'success' };
     }
 
-    async stats(): Promise<any> {
+    async stats(name: string): Promise<any> {
         await this._ensureReady();
         const header = await this.program.header.get();
-        console.log(header)
         this.llm = header.model;
-        this.name = header.name;
+        this.name = name;
         // return { llm: this.llm, model: header.model };
     }
 

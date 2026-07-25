@@ -86,11 +86,13 @@ export class InvokeEngine {
 
     // this is the transport system for sending events to ui or output systems
 
+    
+
 
     static emit = async (id: string, event: GneolEvents, args: any) => {
         const soul = getGlobalSoulStore().get(id);
 
-        await ttc.io(soul._scid)?.emit('message', {
+        await ttc.emit(soul._scid,'message', {
             id: soul.id,
             event: event,
             data: args

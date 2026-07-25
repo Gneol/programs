@@ -1,11 +1,14 @@
 import fs from 'fs';
 import path from 'path';
-import { fetchAgents, getAgent, resolveAgentId } from './soul';
+import { AgentRecord, fetchAgents, getAgent, resolveAgentId } from './soul';
 import { deploy } from './resource';
+import { confirm } from '@clack/prompts';
+import { api } from './api';
 
 export interface SessionInfo {
   soulId: string;
   programPath: string;
+  name: string
 }
 
 function scaffoldIndexGneol(): string {
@@ -107,6 +110,18 @@ export async function findOrPromptIndexGneol(): Promise<{
       const agent = getAgent(selectedId);
       if (!agent) throw new Error(`Agent ${selectedId} not found`);
 
+      // Check workspace mismatch before proceeding
+      if (agent.workSpace && path.resolve(agent.workSpace) !== path.resolve(process.cwd())) {
+        const shouldSwitch = await confirm({
+          message: `Agent workspace "${agent.workSpace}" differs from current directory "${process.cwd()}". Switch to agent's workspace?`,
+          initialValue: true,
+        });
+        if (shouldSwitch) {
+          process.chdir(agent.workSpace);
+          console.log(`Switched workspace to ${agent.workSpace}`);
+        }
+      }
+
       return {
         filePath: agent.programPath,
         newlyCreated: false,
@@ -139,13 +154,28 @@ export async function findOrPromptIndexGneol(): Promise<{
   }
 }
 
+async function checkWorkspace(agent: AgentRecord): Promise<void> {
+  const cwd = process.cwd();
+  if (agent.workSpace && path.resolve(agent.workSpace) !== path.resolve(cwd)) {
+    const shouldSwitch = await confirm({
+      message: `Agent workspace "${agent.workSpace}" differs from current directory "${cwd}". Switch to current workspace?`,
+      initialValue: true,
+    });
+    if (shouldSwitch) {
+      await api.GneolServer.setWorkspace(agent.id, path.resolve(cwd))
+      console.log(`Switched workspace to ${agent.workSpace}`);
+    }
+  }
+}
+
 export async function initializeSession(opts?: { id?: string; agent?: boolean }): Promise<SessionInfo> {
   // If id is provided, use it directly (takes priority over -a)
   if (opts?.id) {
     const agent = getAgent(opts.id);
     if (!agent) throw new Error(`Agent ${opts.id} not found`);
+    await checkWorkspace(agent);
     console.log(`Using existing agent: ${agent.id}`);
-    return { soulId: agent.id, programPath: agent.programPath };
+    return { soulId: agent.id, programPath: agent.programPath, name: agent.name };
   }
 
   // If -a flag is set, prompt user to select an agent
@@ -153,8 +183,9 @@ export async function initializeSession(opts?: { id?: string; agent?: boolean })
     const agentId = await resolveAgentId();
     const agent = getAgent(agentId);
     if (!agent) throw new Error(`Agent ${agentId} not found`);
+    await checkWorkspace(agent);
     console.log(`Using existing agent: ${agent.id}`);
-    return { soulId: agent.id, programPath: agent.programPath };
+    return { soulId: agent.id, programPath: agent.programPath, name: agent.name };
   }
 
   const { filePath, newlyCreated, soulId, programPath } = await findOrPromptIndexGneol();
@@ -162,7 +193,7 @@ export async function initializeSession(opts?: { id?: string; agent?: boolean })
   // If we already have soulId and programPath (existing agent selected), return directly
   if (soulId && programPath) {
     console.log(`Using existing agent: ${soulId}`);
-    return { soulId, programPath };
+    return { soulId, programPath, name: '' };
   }
 
   // Otherwise deploy the selected/newly created file

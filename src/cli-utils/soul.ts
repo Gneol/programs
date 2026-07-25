@@ -2,10 +2,11 @@ import { getGlobalSoulStore } from '../db/program';
 
 const PAGE_SIZE = 10;
 
-interface AgentRecord {
+export interface AgentRecord {
   id: string;
   name: string;
   programPath: string;
+  workSpace?: string;
 }
 
 /**
@@ -13,7 +14,9 @@ interface AgentRecord {
  */
 export function fetchAgents(): AgentRecord[] {
   const store = getGlobalSoulStore();
-  return store.list().map(s => ({ id: s.id, name: s.name, programPath: s.programPath }));
+  return store.list()
+    .filter(s => !s.parentId)
+    .map(s => ({ id: s.id, name: s.name, programPath: s.programPath, workSpace: s.workSpace }));
 }
 
 /**
@@ -23,7 +26,7 @@ export function getAgent(id: string): AgentRecord | undefined {
   const store = getGlobalSoulStore();
   const s = store.get(id);
   if (!s) return undefined;
-  return { id: s.id, name: s.name, programPath: s.programPath };
+  return { id: s.id, name: s.name, programPath: s.programPath, workSpace: s.workSpace };
 }
 
 /**

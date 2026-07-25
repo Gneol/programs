@@ -201,5 +201,5 @@ at("every:1min")
   .do("CPU threshold exceeded.")
   .max(5)
 
-Install the program file, then edit directly and call Program.updateProgram() to apply changes.
+To Install program call "gneol-cli deploy -f pathToFile" to push update
 `    

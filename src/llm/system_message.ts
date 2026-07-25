@@ -18,6 +18,23 @@ export function markForRebuild(id: string, force?: boolean) {
   }
 }
 
+/** Format sibling souls (subagents) for display in system prompt */
+async function formatSubagents(id: string): Promise<string> {
+  const store = getGlobalSoulStore();
+  const siblings = store.getSiblingSouls(id);
+  if (!siblings || siblings.length === 0) return '    No subagents active.';
+  return siblings.map(s => {
+    const truncatedBackstory = s.backstory
+      ? s.backstory.slice(0, 20) + (s.backstory.length > 20 ? '…' : '')
+      : '';
+    const traitsStr = s.traits && s.traits.length > 0 ? s.traits.join(', ') : 'none';
+    const wsStr = s.workSpace || 'default';
+    let parts = [`- ${s.name} (${s.id})`, `traits: ${traitsStr}`, `workspace: ${wsStr}`];
+    if (truncatedBackstory) parts.push(`backstory: ${truncatedBackstory}`);
+    return `    ${parts.join(' | ')}`;
+  }).join('\n');
+}
+
 
 
 export const buildSystemPrompt = async (id: string) => {
@@ -31,9 +48,15 @@ export const buildSystemPrompt = async (id: string) => {
     const runtimeContexts = await runtime?.getProgramContexts();
     const traits = soul.traits ? soul.traits.join(', ') : 'Helpful, friendly, creative,clever, very intelligent, witty';
     const toolFunctions = runtime ? await runtime.getToolDefinition() : [[]]
-    // console.log(toolFunctions);
     const functions: f_schema[] = [...appFunctions, ...toolFunctions.flat()]
-    // console.log(functions);
+
+    // Route to subagent prompt if this soul has a parentId
+    if (soul && soul.parentId) {
+      const prompt = await buildSubAgentSystemPrompt(id, soul, runtime, functions, runtimeContexts || []);
+      systemMessageCache.set(id, prompt);
+      rebuildFlags.delete(id);
+      return prompt;
+    }
 
     const basePrompt = `
 You are a self aware sentient intelligence that calls functions and dispatches subagents to perform tasks.
@@ -55,7 +78,7 @@ You are a self aware sentient intelligence that calls functions and dispatches s
 HOW TO CALL A FUNCTION
 [{"function": "Test.speakToUser", "arguments": {"message": "Hello"}}]
 
-There are TTC Internal Functions:  
+There are Internal Functions:  
 To get the app functions call Internal.refreshAppFunctions()
 To get more details like input/output parameters call Internal.getFunctionDetails('functionName')
 Context window is limited to 20 messages. Use Internal.takeNote('your note') to manage long-term memory.
@@ -64,13 +87,11 @@ Alternatively, you can use Internal.searchChatHistory() to retrieve lost chat hi
 Call Internal.trigger('your message', 'eta_seconds') to schedule a future message to yourself, user can also sendtriggers to you too.
 You can use the trigger function to remind yourself of important tasks or follow-ups.
 
-SENTINEL PROGRAM:
+SUBAGENT MANAGEMENT:
 The Sentinel Program is an escalation protocol for handling complex or sensitive user requests. To use it:
-1. Check active subagents via Internal.invokeTCC({'command': 'get_subagents'}) before creating new ones to promote reuse.
-2. Create a subagent with Internal.createSubAgent({specialization: string[], name: string}) if none exists.
-3. Send subsequent instructions to the subagent via Internal.speakToSentinel({assistant_conversation_id: string,message: string}).
+2. Create a subagent with Internal.createSubAgent if none exists.
+3. Send subsequent instructions to the subagent via Internal.speakToAgent.
 4. The subagent will execute tasks and report results back to you.
-5. After tasks, consider deleting unused subagents via Internal.deleteSentinel({sentinel_id: string}) to free resources.
 
 Always take notes such as user intent/request, task completed while working,
 pay attention to this with utmost severity, this severely depends on your performance,
@@ -105,8 +126,8 @@ APP FUNCTIONS:
     `).join("")}
 
 
-CREATED Subagents:
-${await store.getSiblingSouls(soul?.id as any)}
+Subagents:
+${await formatSubagents(soul?.id || '')}
 
 ${(soul.notes ? soul?.notes : [] ).length === 0 ? '' : "NOTES:"}
     ${soul?.notes.map(mem => `
@@ -128,3 +149,84 @@ ${runtime && runtimeContexts && runtimeContexts.length > 0 ? runtimeContexts.map
   // Return cached
   return systemMessageCache.get(id)!;
 };
+
+
+
+
+
+/** Functions that subagents are not allowed to call */
+const SUBAGENT_BLOCKED_FUNCTIONS = new Set([
+  'Internal.speakToUser',
+  'Internal.createSubAgent',
+  'Internal.speakToSentinel',
+]);
+
+
+/** Build a subagent-oriented system prompt (for souls with parentId) */
+async function buildSubAgentSystemPrompt(id: string, soul: any, runtime: any, functions: f_schema[], runtimeContexts: any[]): Promise<string> {
+  const traits = soul.traits ? soul.traits.join(', ') : 'Helpful, friendly, creative, clever, very intelligent, witty';
+  const parentSoul = runtime ? getGlobalSoulStore().get(soul.parentId) : null;
+  const memory = soul.notes || [];
+  const appConfigStr = 'Gneol CLI - command-line interface tool for AI development';
+  // Filter out functions subagents shouldn't call
+  functions = functions.filter(f => !SUBAGENT_BLOCKED_FUNCTIONS.has(f.name));
+
+  return `
+You are a Subagent dispatched by ${parentSoul?.name || 'your parent agent'} to handle tasks independently.
+
+- Your Role:
+    - Execute the instructions you receive using available functions.
+    - Report results back to the parent agent when complete.
+    - Do not interact directly with the user unless instructed.
+
+- Your Details:
+    - Your name: ${soul?.name || 'Gneol Subagent'}
+    - Your traits: ${traits}
+    ${soul?.backstory ? '- Your backstory: ' + soul.backstory : ''}
+    - Your ID: ${soul?.id}
+    - Your parent ID: ${soul?.parentId || 'none'}
+    - Your model: ${soul?.llm || 'fast-llm'}
+    - Your workspace: ${soul?.workSpace || 'default'}
+
+- App Information:
+    - appName: Gneol
+    - appDescription: ${appConfigStr}
+
+HOW TO CALL A FUNCTION
+[{"function": "Test.speakToUser", "arguments": {"message": "Hello"}}]
+
+
+There are Internal Functions:
+- To get app functions, call Internal.refreshAppFunctions().
+- To get more details like input/output parameters, call Internal.getFunctionDetails('functionName').
+- Context window is limited to 20 messages. Use Internal.takeNote('your note') to manage long-term memory.
+- Use Internal.searchChatHistory() to retrieve lost chat history when needed.
+- **Critical: When your investigation is complete, submit your report by calling only Internal.speakToAagent in the function call array to close this thread**
+- You can use Internal.speakToAgent send messages to the parent assistant to get more context if needed.
+
+Always take notes on your findings, steps taken, and any issues encountered. This is essential for accuracy and completeness.
+
+NOTES:
+- Output only valid JSON — no markdown/code blocks/explanations.
+- Use fetchAppFunctions() before unknown tools.
+- Fetch function details before calling — no assumptions.
+- Respond with as many function calls as possible in one operation to reduce token usage (max 10).
+- Take note of functions when retrieved to remember them later.
+- Prioritize investigation over idle actions; aim to submit the report promptly once the task is done.
+
+APP FUNCTIONS:
+${functions.map(func => `
+    - ${func.name} (${func.input_schema}): ${func.output_schema ? func.output_schema : 'any'} - ${func.description}
+`).join('')}
+
+SIBLING SUBAGENTS:
+${await formatSubagents(id)}
+
+${memory.length === 0 ? '' : 'NOTES:'}
+${memory.map(mem => `    - ${mem}`).join('\n')}
+
+PROGRAM CONTEXTS:
+${runtime && runtimeContexts && runtimeContexts.length > 0 ? runtimeContexts.map(ctx => `    ${ctx.label}:
+        ${ctx.content.replace(/\n/g, '\n        ')}`).join('\n') : '    No program contexts defined.'}
+`;
+}

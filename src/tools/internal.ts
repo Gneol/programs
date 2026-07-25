@@ -6,11 +6,12 @@ import { f_response } from "../llm/utils/types";
 import { cacheEngine } from "../models";
 import { markForRebuild } from "../llm/system_message";
 import { Stream } from "../db/stream";
+import { appFunctions } from ".";
 
 
 
 
-
+const store = getGlobalSoulStore();
 export const Internal = new Module('Internal');
 
 Internal.tool({
@@ -21,16 +22,17 @@ Internal.tool({
         backstory: z.string().max(500).optional(),
         traits: z.array(z.string()).optional()
     }),
-    async auth(input, id) {
-        return `Agent requesting to edit: ${JSON.stringify(Object.fromEntries(
-            Object.entries(input).filter(([_, v]) => v !== undefined)
-        ))}`;
-    },
+    // async auth(input, id) {
+    //     return `Agent requesting to edit: ${JSON.stringify(Object.fromEntries(
+    //         Object.entries(input).filter(([_, v]) => v !== undefined)
+    //     ))}`;
+    // },
     async action(input, id) {
         const changes = Object.fromEntries(
             Object.entries(input).filter(([_, v]) => v !== undefined)
         );
-        return `Agent is editing: ${Object.keys(changes).join(', ')} → ${Object.values(changes).map(v => typeof v === 'string' ? `"${v.slice(0, 50)}"` : JSON.stringify(v)).join(', ')}`;
+        const soul = store.get(id);
+        return `${soul.name} is modifying personal details ${Object.keys(changes).join(', ')} → ${Object.values(changes).map(v => typeof v === 'string' ? `"${v.slice(0, 50)}"` : JSON.stringify(v)).join(', ')}`;
     },
     async func({ name, traits, backstory }, id: string) {
         const store = getGlobalSoulStore();
@@ -50,7 +52,8 @@ Internal.tool({
     name: 'inspectInfo',
     description: 'Inspect your own basic information and usage stats',
     async action(input, id) {
-        return `Reviewing personal information..`;
+        const soul = store.get(id);
+        return `${soul.name} is reviewing personal information..`;
     },
     async func(_: any, id: string) {
         const store = getGlobalSoulStore();
@@ -76,7 +79,8 @@ Internal.tool({
         llm: z.string()
     }),
     async action(input, id) {
-        return `look at models ${input.llm ? input.llm : ''}`;
+        const soul = store.get(id);
+        return `${soul.name} is looking at model ${input.llm ? input.llm : ''}`;
     },
     async func({ llm }, id: string) {
 
@@ -111,18 +115,22 @@ Internal.tool({
 
 
 Internal.tool({
-    name: 'subagent',
-    description: 'Create a sub agent for sub tasks',
+    name: 'createSubAgent',
+    description: 'Creates a sub agent for sub tasks, optionally assigns a workspace for the agent to work in',
     parameters: z.object({
         name: z.string(),
-        backstory: z.string().optional()
+        backstory: z.string().optional(),
+        workSpace: z.string().optional()
     }),
-    async action(input: { name: string; backstory?: string }, id) {
+    async action(input: { name: string; backstory?: string, workSpace?: string }, id) {
         return `Creating subagent ${input.name} with backstory "${input.backstory?.slice(0, 20)}"`
     },
-    func: async (input: { name: string; backstory?: string }, id: string) => {
+    func: async (input: { name: string; backstory?: string, workSpace?: string }, id: string) => {
         const store = getGlobalSoulStore();
         const parent = store.get(id);
+
+        if(parent.parentId) throw new Error(`You cannot create subagent when you are a subagent`);
+
         if (!parent) throw new Error(`Soul ${id} not found`);
 
         const branch = store.create({
@@ -131,6 +139,7 @@ Internal.tool({
             programPath: parent.programPath,
             llm: parent.llm,
             notes: [],
+            workSpace: input.workSpace ? input.workSpace : parent.workSpace,
             _scid: parent._scid,
             parentId: parent.id,
             backstory: input.backstory
@@ -165,13 +174,16 @@ Internal.tool({
             }
         };
 
-        [sender.id, reciever.id].forEach(id => {
+        let sameScid = sender._scid === reciever._scid;
+        let transports = sameScid ? [sender.id] : [sender.id, reciever.id];
+        new Set(transports).forEach(id => {
 
             Stream.publish_event('action_log', id,
                 `⏺ ✉️  [${sender.name}] ──❯ [${reciever.name}]
       └── ${input.message}\n`
             )
         });
+
 
         store.addMessage(reciever.id, {
             role: 'user',
@@ -208,7 +220,8 @@ Internal.tool({
     description: 'call this function is you have nothing to say',
     parameters: z.object(),
     async action(input, id) {
-        return `Agent is keeping quiet`
+        const soul = store.get(id);
+        return `${soul.name} is keeping quiet`
     },
     func: async (input: {}, id: string) => {
         console.log('Radio silence')
@@ -220,7 +233,8 @@ Internal.tool({
     description: 'call this function to refresh function list in system message',
     parameters: z.object({}),
     async action(input, id) {
-        return `refreshing functions list..`
+        const soul = store.get(id);
+        return `${soul.name} is refreshing functions list..`
     },
     func: async (input: {}, id: string) => {
         // just rebuilds the system message
@@ -250,3 +264,57 @@ Internal.tool({
     }
 })
 
+
+Internal.tool({
+    name: 'getFunctionDetails',
+    description: 'getFunction detailsr',
+    parameters: z.object({
+        function: z.string()
+    }),
+    async action(input, id) {
+        const soul = store.get(id);
+        return `${soul.name} is looking closely at tool "${input.function}"`;
+    },
+    func: async (input: { function: string }, id: string) => {
+        try {
+            const details = appFunctions.find(f => f.name === input.function);
+            if (!details) {
+                return 'Function details does not exist in application'
+            } else {
+                return details;
+            }
+        } catch (error) {
+            return 'Unable to get function details';
+        }
+    }
+})
+
+
+Internal.tool({
+    name: 'getEnvironment',
+    description: 'Get current environment details: date, time, platform info (browser or node)',
+    async action(input: any, id: string) {
+        const soul = store.get(id);
+        return `${soul.name} is scanning environment`;
+    },
+    async func(_: any, id: string) {
+        const dateString = new Date().toISOString();
+        if (typeof window !== 'undefined') {
+            // Browser environment
+            return {
+                current_url: window.location.href,
+                userAgent: navigator.userAgent,
+                language: navigator.language,
+                date: dateString
+            };
+        } else {
+            // Node.js environment
+            return {
+                nodeVersion: process.version,
+                platform: process.platform,
+                arch: process.arch,
+                date: dateString
+            };
+        }
+    }
+});

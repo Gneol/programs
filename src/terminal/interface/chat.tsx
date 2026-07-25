@@ -615,6 +615,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ assistant }) => {
     //   }
     // ])
 
+    // pushSystemMessage(assistant.name + ' ' + assistant.model)
     return () => {
       clearChat = null;
       pushSystemMessage = null;
@@ -724,27 +725,18 @@ const ChatApp: React.FC<ChatAppProps> = ({ assistant }) => {
   );
 };
 
-export async function startChat(agent: string, path: string) {
+export async function startChat(agent: string, name: string, path: string) {
 
-  // console.log(agent, path)
+  // console.log(agent, path, name)
   try {
     const current = new Assistant(agent, path);
     
-    await current.stats();
+    await current.stats(name);
     await current.init();
     // console.log(current)
     setCurrent(current);
 
     await initCommands();
-
-    // current.subscribe('llm', (arg)=>{
-    //   console.log(arg);
-    // })
-
-    //     current.subscribe('message', (arg)=>{
-    //   console.log(arg);
-    // })
-    // await current.message("Hi")
   
     const app = withFullScreen(
       <ChatApp assistant={current} />,

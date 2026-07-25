@@ -2,6 +2,7 @@ import React from 'react';
 import { Box, Text } from 'ink';
 import { BotIcon } from './boticon';
 import { licenseState } from './licenseStatus';
+import { pushSystemMessage } from '../interface/chat';
 
 interface ASCIIHeaderProps {
   assistantName?: string;

@@ -6,7 +6,7 @@ import fs from 'fs';
 import path from 'path';
 import { GneolProgram } from '../types';
 import { parseTitle, parseName, parseTraits, parseBackstory, parseContexts, parseEnvDirective, parseParentModel, parseId, removeProgramLine } from './program';
-import { parseSentinels } from './sentinel';
+import { parseSubagents, parseSentinels } from './subagent';
 import { parseSummarization } from './summarization';
 import { parseMcp } from './mcp';
 import { parseTools } from './tool';
@@ -45,8 +45,8 @@ export function parseGneol(content: string, path: string = ''): GneolProgram {
     // 5. Remove the program header line entirely
     const afterProgramLine = removeProgramLine(afterContexts);
 
-    // 6. Parse sentinel() declarations with model, id, description
-    const { sentinelDeclarations, wildcardModel, filteredContent: afterSentinel } = parseSentinels(afterProgramLine);
+    // 6. Parse subagent() declarations with model, id, description
+    const { subagentDeclarations, wildcardModel, filteredContent: afterSentinel } = parseSubagents(afterProgramLine);
 
     // 7. Parse summarization() config
     const { summarizationModel, summarizationPrompt, filteredContent: afterSummarization } = parseSummarization(afterSentinel);
@@ -78,7 +78,8 @@ export function parseGneol(content: string, path: string = ''): GneolProgram {
         summarizationModel,
         summarizationPrompt,
         agentId,
-        sentinelDeclarations,
+        sentinelDeclarations: subagentDeclarations,
+        subagentDeclarations: subagentDeclarations,
         wildcardModel,
         modelBindings,
         mcpConfigs,

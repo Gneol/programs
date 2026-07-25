@@ -14,12 +14,15 @@ export type ModelBinding = {
     rateLimit?: number;
 };
 
-export interface SentinelDeclaration {
+export interface SubagentDeclaration {
     name: string;
     model?: string;
     id?: string;
     description?: string;
 };
+
+// Backward-compatible alias
+export type SentinelDeclaration = SubagentDeclaration;
 
 export type IfExecType = { script: string; expected: string; operator: 'eq' | 'lt' | 'gt' | 'contains' }
 
@@ -39,7 +42,7 @@ export interface Action {
     modify: boolean;
     condition?: string; // Natural language condition evaluated by LLM before executing
     ifExec?: IfExecType;
-    sentinel?: string; // Sentinel name or ID to route this trigger to
+    subagent?: string; // Sentinel name or ID to route this trigger to
 }
 
 
@@ -62,7 +65,8 @@ export interface GneolProgram {
     parentModel?: string;
     summarizationModel?: string;
     summarizationPrompt?: string;
-    sentinelDeclarations?: SentinelDeclaration[];
+    subagentDeclarations?: SubagentDeclaration[];
+    sentinelDeclarations?: SubagentDeclaration[];
     wildcardModel?: string;
     modelBindings?: ModelBinding[];
     mcpConfigs?: Record<string, string>;

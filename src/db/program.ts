@@ -168,7 +168,7 @@ export class GlobalSoulStore {
     /* ── public API ─────────────────────────────────────── */
 
     /** Create a new soul and persist it */
-    create(config: { name: string; program: string; programPath: string, llm: string, notes: string[], parentId?: string, backstory?: string, _scid?: string }): Soul {
+    create(config: { id?: string; name: string; program: string; programPath: string, llm: string, notes: string[], parentId?: string, backstory?: string, _scid?: string, workSpace: string }): Soul {
         const soul = new Soul(config);
         this.saveSoulConfig(soul);
         // Don't create messages file upfront — loadMessages returns [] lazily on first access
