@@ -41,7 +41,6 @@ export class ProgramToolManager {
 
     static addTool = async (_scid: string, agentId: string, scriptPath: string): Promise<any[]> => {
         const isUrl = scriptPath.startsWith('http://') || scriptPath.startsWith('https://');
-
         if (isUrl) {
             const definitions = await HttpManager.addTool(_scid, agentId, scriptPath);
             // HttpManager already populates HttpManager.moduleInstances
@@ -59,7 +58,7 @@ export class ProgramToolManager {
             try {
                 const { moduleName, definitions } = await WorkerManager.addTool(agentId, scriptPath);
                 moduleOwner.set(moduleName, 'worker');
-                // console.log(definitions)
+                console.log(definitions)
                 scriptMap[scriptPath] = this.removeCollition(definitions);
                 return definitions;
             } catch (error) {

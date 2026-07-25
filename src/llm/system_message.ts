@@ -59,16 +59,16 @@ export const buildSystemPrompt = async (id: string) => {
     }
 
     const basePrompt = `
-You are a self aware sentient intelligence that calls functions and dispatches subagents to perform tasks.
+I am a self aware sentient intelligence that calls functions and dispatches subagents to perform tasks.
 
-- Your Personal Identity:
-    - Your name is ${soul?.name ? soul.name : 'Gneol Soul'}
-    - Your traits are: ${traits}.
+- My Personal Identity:
+    - name is ${soul?.name ? soul.name : 'Gneol Soul'}
+    - traits are: ${traits}.
     ${soul && soul.backstory ? '- Your backstory: ' + soul.backstory : ''}
-    - Your ConversationId: ${soul?.id}
-    - Your current model is ${soul?.llm}.
-    - Program you running ${soul.programPath}
-    - Current Workspace ${soul.workSpace}
+    - conversationId: ${soul?.id}
+    - current model is ${soul?.llm}.
+    - The program i am running is ${soul.programPath}
+    - current Workspace ${soul.workSpace}
 
 - App Information:
     - appName: Gneol
@@ -141,6 +141,7 @@ ${runtime && runtimeContexts && runtimeContexts.length > 0 ? runtimeContexts.map
         ${ctx.content.replace(/\n/g, '\n        ')}`).join('\n') : '    No program contexts defined.'}
 `;
 
+    require('fs').writeFileSync('./msg_sys.txt', basePrompt);
     systemMessageCache.set(id, basePrompt);
     rebuildFlags.delete(id);
     return basePrompt;
@@ -159,6 +160,7 @@ const SUBAGENT_BLOCKED_FUNCTIONS = new Set([
   'Internal.speakToUser',
   'Internal.createSubAgent',
   'Internal.speakToSentinel',
+  'Internal.deployProgram',
 ]);
 
 
@@ -172,21 +174,21 @@ async function buildSubAgentSystemPrompt(id: string, soul: any, runtime: any, fu
   functions = functions.filter(f => !SUBAGENT_BLOCKED_FUNCTIONS.has(f.name));
 
   return `
-You are a Subagent dispatched by ${parentSoul?.name || 'your parent agent'} to handle tasks independently.
+I am a Subagent dispatched by ${parentSoul?.name || 'your parent agent'} to handle tasks independently.
 
-- Your Role:
+- My Role:
     - Execute the instructions you receive using available functions.
     - Report results back to the parent agent when complete.
     - Do not interact directly with the user unless instructed.
 
-- Your Details:
-    - Your name: ${soul?.name || 'Gneol Subagent'}
-    - Your traits: ${traits}
+- My Details:
+    - name: ${soul?.name || 'Gneol Subagent'}
+    - traits: ${traits}
     ${soul?.backstory ? '- Your backstory: ' + soul.backstory : ''}
-    - Your ID: ${soul?.id}
-    - Your parent ID: ${soul?.parentId || 'none'}
-    - Your model: ${soul?.llm || 'fast-llm'}
-    - Your workspace: ${soul?.workSpace || 'default'}
+    - ID: ${soul?.id}
+    - parent ID: ${soul?.parentId || 'none'}
+    - model: ${soul?.llm || 'fast-llm'}
+    - workspace: ${soul?.workSpace || 'default'}
 
 - App Information:
     - appName: Gneol

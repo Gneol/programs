@@ -8,7 +8,7 @@ import { markForRebuild } from "../llm/system_message";
 import { Stream } from "../db/stream";
 import { appFunctions } from ".";
 
-
+import { ProgramRuntime } from '../program/runtime';
 
 
 const store = getGlobalSoulStore();
@@ -45,6 +45,31 @@ Internal.tool({
         });
         markForRebuild(id, true);
         return `Updated your information`
+    }
+});
+
+Internal.tool({
+    name: 'deployProgram',
+    description: 'Deploy a .gneol program file by running the CLI deploy command.',
+    parameters: z.object({
+        filePath: z.string().describe('Path to the .gneol program file to deploy')
+    }),
+    async action(input, id) {
+        const soul = store.get(id);
+        return `${soul.name} is deploying program at "${input.filePath}"`;
+    },
+    async func({ filePath }, id: string) {
+        try {
+            const result = await ProgramRuntime.deployProgram(filePath);
+            const runtime = ProgramRuntime.getRuntimeByTitle(result.title);
+            if (runtime) {
+                await runtime.handleToolDefinitions(runtime.program);
+            }
+            markForRebuild(result.soulId, true);
+            return result;
+        } catch (error) {
+            return error.message
+        }
     }
 });
 
@@ -129,7 +154,7 @@ Internal.tool({
         const store = getGlobalSoulStore();
         const parent = store.get(id);
 
-        if(parent.parentId) throw new Error(`You cannot create subagent when you are a subagent`);
+        if (parent.parentId) throw new Error(`You cannot create subagent when you are a subagent`);
 
         if (!parent) throw new Error(`Soul ${id} not found`);
 
@@ -315,6 +340,31 @@ Internal.tool({
                 arch: process.arch,
                 date: dateString
             };
+        }
+    }
+});
+
+Internal.tool({
+    name: 'deployProgram',
+    description: 'Deploy a .gneol program file directly without CLI.',
+    parameters: z.object({
+        filePath: z.string().describe('Path to the .gneol program file to deploy')
+    }),
+    async action(input, id) {
+        const soul = store.get(id);
+        return `${soul.name} is deploying program at "${input.filePath}"`;
+    },
+    async func({ filePath }, id: string) {
+        try {
+            const result = await ProgramRuntime.deployProgram(filePath);
+            const runtime = ProgramRuntime.getRuntimeByTitle(result.title);
+            if (runtime) {
+                await runtime.handleToolDefinitions(runtime.program);
+            }
+            markForRebuild(result.soulId, true);
+            return `Program deployed successfully.\n${JSON.stringify(result, null, 2)}`;
+        } catch (error: any) {
+            return `Deploy failed: ${error.message || 'Unknown error'}`;
         }
     }
 });

@@ -12,19 +12,18 @@ const tools = [FileModule, Internal, CliModule];
 export const appFunctions = (tools.map(t => t.methodDoc().definitions)).flat();
 export const appInvokationHandler = serverLocalModules(tools)
 
-// setTimeout(async ()=>{
+// setTimeout(async () => {
 //     try {
-//         const response = await appInvokationHandler.invoke(
-//             'gneol_soul_1cbb4f0a-0037-4c11-9fb4-dd90ff551e3d',
-//             'Cli.execute',
-//             {command: 'rm dad_joke.txt'}
+//         const response = await ProgramToolManager.invokeTool(
+//             { function: 'tool.CustomTool.testFunction', arguments: { token: 'SecretToken' } },
+//             'gneol_soul_5133bea4-e263-4575-9a3c-261fb13e2943'
 //         )
 //         // console.log(response, 'value or response oh');
 //     } catch (error) {
 //         console.log(error)
 //     }
 //     console.log('invoked oh')
-// }, 5000)
+// }, 2000)
 
 export const onAuthEvent = async (args, type) => {
     const store = getGlobalSoulStore();
@@ -33,11 +32,12 @@ export const onAuthEvent = async (args, type) => {
     await ttc.io(soul._scid)?.emit('message', {
         id: soul.id,
         event: 'permission',
-        data:  {
+        data: {
             ...args.permission,
             pId
         }
     });
+    // ProgramToolManager.approveFunction(pId, true, '');
 }
 
 

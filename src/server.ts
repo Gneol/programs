@@ -284,7 +284,13 @@ export class GneolServer {
         })
     })
     async deploy(programPath: string) {
-        return await ProgramRuntime.deployProgram(programPath);
+        const result = await ProgramRuntime.deployProgram(programPath);
+        const runtime = ProgramRuntime.getRuntimeByTitle(result.title);
+        if (runtime) {
+            await runtime.handleToolDefinitions(runtime.program);
+        }
+        markForRebuild(result.soulId, true);
+        return result;
     }
 
     @ttc.describe({

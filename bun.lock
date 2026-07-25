@@ -14,7 +14,7 @@
         "express": "^5.2.1",
         "fullscreen-ink": "^0.1.0",
         "glob": "^13.0.6",
-        "gneol-sdk": "file:/Users/elijah/Desktop/ttcv2/gneol-sdk/gneol-sdk-0.4.0.tgz",
+        "gneol-sdk": "file:/Users/elijah/Desktop/ttcv2/gneol-sdk/gneol-sdk-0.5.0.tgz",
         "html-to-text": "^9.0.5",
         "ink": "^7.1.1",
         "ink-markdown": "^1.0.4",
@@ -316,7 +316,7 @@
 
     "glob-parent": ["glob-parent@5.1.2", "", { "dependencies": { "is-glob": "^4.0.1" } }, "sha512-AOIgSQCepiJYwP3ARnGx+5VnTu2HBYdzbGP45eLw1vr3zB3vZLeyed1sC9hnbcOc9/SrMyM5RPQrkGz4aS9Zow=="],
 
-    "gneol-sdk": ["gneol-sdk@/Users/elijah/Desktop/ttcv2/gneol-sdk/gneol-sdk-0.4.0.tgz", { "dependencies": { "zod": "^4.4.3" } }],
+    "gneol-sdk": ["gneol-sdk@/Users/elijah/Desktop/ttcv2/gneol-sdk/gneol-sdk-0.5.0.tgz", { "dependencies": { "zod": "^4.4.3" } }],
 
     "gopd": ["gopd@1.2.0", "", {}, "sha512-ZUKRh6/kUFoAiTAtTYPZJ3hw9wNxx+BIBOijnlG9PnrJsCcSjs1wyyD6vJpaYtgnzDrKYRSqf3OO6Rfa93xsRg=="],
 

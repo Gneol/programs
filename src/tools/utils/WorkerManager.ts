@@ -40,7 +40,7 @@ export class WorkerManager {
 
         worker.on('message', async (msg: any) => {
             if (msg.action) {
-                await Stream.publish_event('llm', agentId, msg.action);
+                await Stream.publish_event('action_log', agentId, msg.action);
             }
             if (msg.permission) {
                 await Stream.publish_event('permission', agentId, msg.permission);
@@ -69,7 +69,7 @@ export class WorkerManager {
                 if (msg.id === id && (msg.type === 'invoke' || msg.type === 'error')) {
                     clearTimeout(timeout);
                     entry.instance.removeListener('message', handler);
-                    if (msg.type === 'error') reject(new Error(msg.message));
+                    if (msg.type === 'error') resolve(msg.message);
                     else resolve(msg.data);
                 }
                 if(msg.type === 'auth'){
@@ -77,7 +77,7 @@ export class WorkerManager {
                 }
             };
             entry.instance.on('message', handler);
-            // console.log(`${module}.${method}`)
+            console.log(`${module}.${method}`)
             entry.instance.postMessage({ id, type: 'invoke', method: `${module}.${method}`, args: call.arguments });
         });
     }

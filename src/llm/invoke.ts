@@ -64,7 +64,8 @@ export class InvokeEngine {
                 }
             }
 
-            if (response) {
+            const typeR = typeof response;
+            if (response || typeR === 'boolean' || typeR === 'number') {
                 responses.push({
                     function: call.function as any,
                     response
@@ -90,6 +91,7 @@ export class InvokeEngine {
 
 
     static emit = async (id: string, event: GneolEvents, args: any) => {
+        // console.log(id, 'ID OHHHHH');
         const soul = getGlobalSoulStore().get(id);
 
         await ttc.emit(soul._scid,'message', {

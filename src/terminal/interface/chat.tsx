@@ -32,9 +32,6 @@ import { ASCIIHeader } from "../utils/ascii.js";
 import { licenseState } from "../utils/licenseStatus";
 import { NetworkStatus } from "../utils/networkStatus";
 import { ThinkingAnimation } from "../utils/thinking";
-// TODO: replace handleTunnel with gneol-sdk equivalent
-// import { handleTunnel } from "ttc-origin-server";
-const handleTunnel = async (req: any) => {};
 import { invokeCli } from "../utils/cliInvoke.js";
 import { Assistant } from "../ttc/api";
 import { initCommands } from "../ttc/cmd.js";
@@ -306,7 +303,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ assistant }) => {
       // File selected from global search
       const relativePath = selected; // already relative
       // Append path to input
-      setInputKey((prev) => prev + relativePath.length + 2);
+      setInputKey(Date.now());
       setInput((prev) => {
         const newText = prev.replace(/@[^\s]*$/, "") + "@" + relativePath + " ";
         return newText;
@@ -671,6 +668,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ assistant }) => {
         <Box flexGrow={1}>
           {!promptState.isActive ? (
             <TextInput
+              key={inputKey}
               value={input}
               onChange={handleInputChange}
               onSubmit={handleSubmit}

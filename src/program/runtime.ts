@@ -118,7 +118,7 @@ export class ProgramRuntime {
             try {
                 const resolvedPath = fspath.resolve(programDir, def.scriptPath);
                 def.scriptPath = resolvedPath;
-                await ProgramToolManager.addTool(this._scid, program.agentId, resolvedPath);
+                await ProgramToolManager.addTool(this._scid, this.agentId, resolvedPath);
             } catch (error) {
                 console.error(error.message);
             }
