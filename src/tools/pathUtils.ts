@@ -2,13 +2,28 @@ import path from 'path';
 import { getGlobalSoulStore } from '../db/program';
 
 /**
- * Resolve a file path relative to the soul's workspace.
+ * Get a soul's effective workspace. If the soul is a subagent (has parentId),
+ * use the parent's workspace so all records share the same .gneol folder.
+ */
+export function resolveAgentWorkspace(soulId: string): string {
+  const store = getGlobalSoulStore();
+  const soul = store.get(soulId);
+  if (!soul) throw new Error('agent does not exist')
+  if (soul.parentId) {
+    const parent = store.get(soul.parentId);
+    if (parent) return parent.workSpace;
+  }
+  return soul.workSpace;
+}
+
+/**
+ * Resolve a file path relative to the soul's effective workspace.
  * Throws if the resolved path escapes the workspace.
  */
 export function resolveFilePath(filePath: string, soulId: string): string {
   const store = getGlobalSoulStore();
   const soul = store.get(soulId);
-  const workspace = soul?.workSpace || process.cwd();
+  const workspace = resolveAgentWorkspace(soulId);
 
   let resolved: string;
   if (filePath.startsWith('/') || filePath.startsWith('\\')) {
@@ -32,7 +47,7 @@ export function resolveFilePath(filePath: string, soulId: string): string {
 export function displaySoulPath(filePath: string, soulId: string): string {
   const store = getGlobalSoulStore();
   const soul = store.get(soulId);
-  const workspace = soul?.workSpace || process.cwd();
+  const workspace = resolveAgentWorkspace(soulId);
   if (filePath.startsWith(workspace)) {
     return path.relative(workspace, filePath);
   }
@@ -44,9 +59,7 @@ export function displaySoulPath(filePath: string, soulId: string): string {
  * Returns the pattern and a cwd for glob.
  */
 export function resolveGlobPattern(pattern: string, soulId: string): { pattern: string; cwd: string } {
-  const store = getGlobalSoulStore();
-  const soul = store.get(soulId);
-  const workspace = soul?.workSpace || process.cwd();
+  const workspace = resolveAgentWorkspace(soulId);
 
   // If pattern is absolute, ensure it is within workspace
   if (pattern.startsWith('/') || pattern.startsWith('\\')) {

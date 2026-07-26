@@ -4,7 +4,7 @@ import { f_schema } from "./utils/types";
 import { ProgramRuntime } from '../program/runtime';
 import { appFunctions } from "../tools";
 import { appConfig } from './config';
-import { ProgramToolManager } from "../tools/utils/ProgramToolManager";
+import { PermissionInfo } from './permission_info';
 
 /** System message cache and rebuild flags */
 export const systemMessageCache = new Map<string, string>();
@@ -135,6 +135,7 @@ ${(soul.notes ? soul?.notes : [] ).length === 0 ? '' : "NOTES:"}
     `
     ).join("")}
 
+${PermissionInfo}
 
 PROGRAM CONTEXTS:
 ${runtime && runtimeContexts && runtimeContexts.length > 0 ? runtimeContexts.map(ctx => `    ${ctx.label}:
@@ -197,7 +198,6 @@ I am a Subagent dispatched by ${parentSoul?.name || 'your parent agent'} to hand
 HOW TO CALL A FUNCTION
 [{"function": "Test.speakToUser", "arguments": {"message": "Hello"}}]
 
-
 There are Internal Functions:
 - To get app functions, call Internal.refreshAppFunctions().
 - To get more details like input/output parameters, call Internal.getFunctionDetails('functionName').
@@ -226,6 +226,9 @@ ${await formatSubagents(id)}
 
 ${memory.length === 0 ? '' : 'NOTES:'}
 ${memory.map(mem => `    - ${mem}`).join('\n')}
+
+
+${PermissionInfo}
 
 PROGRAM CONTEXTS:
 ${runtime && runtimeContexts && runtimeContexts.length > 0 ? runtimeContexts.map(ctx => `    ${ctx.label}:

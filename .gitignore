@@ -3,3 +3,4 @@ dist
 *.gneol
 .env
 *.txt
+debug.json

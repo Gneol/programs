@@ -90,6 +90,7 @@ Internal.tool({
             traits: soul.traits,
             backstory: soul.backstory,
             llm: soul.llm,
+            workSpace: soul.workSpace,
             inputTokens: soul.inputTokens,
             outputTokens: soul.outputTokens,
             cachedTokens: soul.cachedTokens

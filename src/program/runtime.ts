@@ -397,7 +397,7 @@ export class ProgramRuntime {
             const chat = await store.get(this.agentId);
             const messages = store.getMessages(this.agentId);
             const _messages = await stripFunctionCalls({
-                messages: messages,
+                messages: [...messages],
                 _scid: this._scid
             });
             const prompt = [

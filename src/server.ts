@@ -176,7 +176,7 @@ export class GneolServer {
             const soul = store.get(id);
             if (!soul) throw new Error(`Soul not found: ${id}`);
 
-            const messages = soul.loadMessages();
+            const messages = [...soul.loadMessages()];
             // console.log(messages);
             // Slice from the end to get the most recent messages, then reverse to show latest first
 
