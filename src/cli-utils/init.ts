@@ -14,20 +14,24 @@ export interface SessionInfo {
 function scaffoldIndexGneol(): string {
   const folderName = path.basename(process.cwd()).replace(/[^a-zA-Z0-9_-]/g, '_');
   const content = `program("${folderName}")
-  .model("eagle-eye")
+  .model("primary")
   .env(".env")
-  .context("Readme").resource("README.md")
+  .context("USER INSTRUCTIONS").resource("GNEOL.md")
 
-model("eagle-eye")
-  .provider("openrouter")
-  .modelId("openai/gpt-4o")
+model("primary")
+  .provider("deepseek")
+  .modelId("deepseek-v4-flash")
   .apiKey("OPENROUTER_API_KEY")
-  .temperature(0.2)
-  .maxTokens(4000)
+  .temperature(0.7)
+  .maxTokens(60000)
 
-sentinel().model("eagle-eye")
+subagent().model("primary")
 
-summarization().model("eagle-eye").prompt("Summarize in 3 bullets")
+summarization().model("primary").prompt("Summarize in 3 bullets")
+
+on("Idle")
+  .if("if the last message of the ai expresses an intention to continue but makes no function call")
+  .do("if you are done, call keepQuiet or continue with your work")
 `;
   const filePath = path.join(process.cwd(), 'index.gneol');
   fs.writeFileSync(filePath, content, 'utf-8');
@@ -41,6 +45,29 @@ function listGneolFiles(): string[] {
   return files.map(f => path.join(cwd, f));
 }
 
+
+function findIndexGneolUpwards(startDir: string, maxSteps: number): { path: string; steps: number } | null {
+  let current = startDir;
+  for (let i = 1; i <= maxSteps; i++) {
+    const parent = path.dirname(current);
+    if (parent === current) break; // reached root
+    current = parent;
+    const candidate = path.join(current, 'index.gneol');
+    if (fs.existsSync(candidate)) {
+      return { path: candidate, steps: i };
+    }
+  }
+  return null;
+}
+
+function findIndexGneolAuto(startDir: string): { path: string; steps: number } | null {
+  return findIndexGneolUpwards(startDir, 5);
+}
+
+function findIndexGneolDeep(startDir: string): { path: string; steps: number } | null {
+  return findIndexGneolUpwards(startDir, 10);
+}
+
 export async function findOrPromptIndexGneol(): Promise<{
   filePath: string;
   newlyCreated: boolean;
@@ -49,12 +76,34 @@ export async function findOrPromptIndexGneol(): Promise<{
 }> {
   const indexFile = path.join(process.cwd(), 'index.gneol');
 
-  // 1. Check if index.gneol already exists
+  // 1. Check if index.gneol already exists in cwd
   if (fs.existsSync(indexFile)) {
     return { filePath: indexFile, newlyCreated: false };
   }
 
-  // 2. Not found — prompt user
+  // 2. Search upward directories — auto-use if found within 5 levels
+  const autoFound = findIndexGneolAuto(process.cwd());
+  if (autoFound) {
+    return { filePath: autoFound.path, newlyCreated: false };
+  }
+
+  // 3. Search deeper (up to 10 levels) — prompt if found
+  const deepFound = findIndexGneolDeep(process.cwd());
+  if (deepFound) {
+    const relativePath = path.relative(process.cwd(), deepFound.path);
+    const shouldUse = await confirm({
+      message: `index.gneol detected ${deepFound.steps} levels up in ${relativePath}. Use this file?`,
+      initialValue: true,
+    });
+    if (shouldUse) {
+      process.chdir(path.dirname(deepFound.path));
+      console.log(`Switched to ${process.cwd()}`);
+      return { filePath: deepFound.path, newlyCreated: false };
+    }
+    // else fall through to creation prompt
+  }
+
+  // 4. Not found — prompt user
   const { select } = await import('@clack/prompts');
 
   const options: { label: string; value: string }[] = [

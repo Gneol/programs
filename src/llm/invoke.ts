@@ -3,7 +3,7 @@ import { appInvokationHandler } from "../tools";
 import { f_call, f_response } from './utils/types'
 import { ProgramRuntime } from '../program/runtime';
 import { ProgramToolManager } from "../tools/utils/ProgramToolManager";
-import { getGlobalSoulStore } from "../db/program";
+import { getGlobalSoulStore, Soul } from "../db/program";
 import { ttc } from "ttc-rpc";
 import { Stream } from "../db/stream";
 
@@ -37,7 +37,11 @@ export class InvokeEngine {
         // some are internal functions
         // some are gneol app native functions
         const responses: f_response[] = [];
+        let hasKeepQuiet = false;
 
+        if (calls.length > 0) {
+            Stream.setState(conversation_id, 'invoking');
+        }
 
         console.log(`Calling  functions....`)
         for (const call of calls) {
@@ -52,6 +56,7 @@ export class InvokeEngine {
                     response = error.message;
                 }
             } else {
+                hasKeepQuiet = !hasKeepQuiet && call.function === 'Internal.keepQuiet' ? true : hasKeepQuiet;
                 try {
                     response = await appInvokationHandler.invoke(conversation_id, call.function as any, call.arguments);
 
@@ -70,13 +75,23 @@ export class InvokeEngine {
                     function: call.function as any,
                     response
                 })
-            } else {
-                Stream.publish_event('llm', conversation_id, {
-                state: 'idle'
-            })
             }
 
-            await new Promise((resolve)=>setTimeout(resolve, 1000));
+
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+        }
+
+        if (responses.length === 0) {
+            Stream.publish_event('llm', conversation_id, {
+                state: 'idle'
+            })
+
+            // if the keepQuiet function has not been called, set idle else leave it.. 
+            // keepQuiet has called dormant on it
+            // This is a very very critical internal step
+            if (!hasKeepQuiet) {
+                Stream.setState(conversation_id, 'idle');
+            }
         }
 
         // console.log(responses)
@@ -87,15 +102,29 @@ export class InvokeEngine {
 
     // this is the transport system for sending events to ui or output systems
 
-    
+
+    static async resolveScid(id: string) {
+        const store = getGlobalSoulStore();
+        let soul = store.get(id);
+        if (soul.parentId) {
+            const parent = store.get(soul.parentId);
+            if (parent._scid !== soul.id) {
+                soul = await store.update(id, {
+                    _scid: parent._scid
+                })
+            }
+            soul._scid = parent._scid;
+        }
+        return soul;
+    }
 
 
     static emit = async (id: string, event: GneolEvents, args: any) => {
         // console.log(id, 'ID OHHHHH');
-        const soul = getGlobalSoulStore().get(id);
+        const soul = await this.resolveScid(id);
 
-        await ttc.emit(soul._scid,'message', {
-            id: soul.id,
+        await ttc.emit(soul._scid, 'message', {
+            id,
             event: event,
             data: args
         })

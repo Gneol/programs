@@ -88,7 +88,6 @@ Call Internal.trigger('your message', 'eta_seconds') to schedule a future messag
 You can use the trigger function to remind yourself of important tasks or follow-ups.
 
 SUBAGENT MANAGEMENT:
-The Sentinel Program is an escalation protocol for handling complex or sensitive user requests. To use it:
 2. Create a subagent with Internal.createSubAgent if none exists.
 3. Send subsequent instructions to the subagent via Internal.speakToAgent.
 4. The subagent will execute tasks and report results back to you.
@@ -160,7 +159,6 @@ ${runtime && runtimeContexts && runtimeContexts.length > 0 ? runtimeContexts.map
 const SUBAGENT_BLOCKED_FUNCTIONS = new Set([
   'Internal.speakToUser',
   'Internal.createSubAgent',
-  'Internal.speakToSentinel',
   'Internal.deployProgram',
 ]);
 

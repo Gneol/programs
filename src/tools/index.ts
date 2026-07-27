@@ -14,16 +14,20 @@ export const appInvokationHandler = serverLocalModules(tools)
 
 // setTimeout(async () => {
 //     try {
-//         const response = await ProgramToolManager.invokeTool(
-//             { function: 'tool.CustomTool.testFunction', arguments: { token: 'SecretToken' } },
-//             'gneol_soul_5133bea4-e263-4575-9a3c-261fb13e2943'
+//         // const response = await ProgramToolManager.invokeTool(
+//         //     { function: 'tool.CustomTool.testFunction', arguments: { token: 'SecretToken' } },
+//         //     'gneol_soul_5133bea4-e263-4575-9a3c-261fb13e2943'
+//         // )
+//         const response = await appInvokationHandler.invoke(
+//             'gneol_soul_5133bea4-e263-4575-9a3c-261fb13e2943',
+//             'Internal.keepQuiet', {},
 //         )
-//         // console.log(response, 'value or response oh');
+//         console.log(response, 'value or response oh');
 //     } catch (error) {
 //         console.log(error)
 //     }
 //     console.log('invoked oh')
-// }, 2000)
+// }, 10000)
 
 export const onAuthEvent = async (args, type) => {
     const store = getGlobalSoulStore();

@@ -1,64 +1,67 @@
 import { ttc } from "ttc-rpc";
 import { InvokeEngine } from "../llm/invoke.js";
 import { ProgramRuntime } from "../program/runtime.js";
+import { getGlobalSoulStore } from "./program.js";
 
 
 
 export type TTCEvents = 'llm' | 'permission' | 'action_log' | 'network'
+type StateType = 'idle' | 'dormant' | 'processing' | 'invoking' | 'stale';
 
 export type State = {
     ai: number,
     messageState: 'sent' | 'recieved',
-    state: 'idle' | 'active'
+    state: StateType
 }
 export class Stream {
 
     static activityTracker: Map<string, State> = new Map();
 
-    static init() {
+    static init = () => {
         // Clear any previous interval to avoid duplicates on re-init
         if ((this as any)._interval) clearInterval((this as any)._interval);
         (this as any)._interval = setInterval(() => this.checker(), 5000);
     }
 
-    private static checker() {
-        this.activityTracker.forEach((state, key) => {
-            const ai_elapsed = (Date.now() - state.ai) / 1000;
-            // if ai has not recieved message
-            if (state.messageState === 'sent' && ai_elapsed > 60000) {
-                // Only fire idle on transition from active -> idle
-                if (state.state !== 'idle') {
-                    state.state = 'idle';
-                    const runtime = ProgramRuntime.getRuntime(key);
-                    if (runtime) {
-                        runtime.invoke('Idle');
-                    }
-                }
-            } else {
-                state.state = 'active';
+    static setState = (id: string, state: StateType) => {
+        let data = this.activityTracker.get(id);
+        if (!data) {
+            data = {
+                ai: Date.now(),
+                messageState: 'recieved',
+                state: 'dormant'
             }
+        } else {
+            data.state = state;
+        }
+        this.activityTracker.set(id, data);
+    }
 
-            this.activityTracker.set(key, state);
+    private static checker = () => {
+        this.activityTracker.forEach((state, key) => {
+            const ai_elapsed = (Date.now() - state.ai) / 1000; //in seconds
+            // if ai has not recieved message
+            // console.log(state, state.messageState === 'recieved' && ai_elapsed > 5)
+            if (state.state === 'idle' && ai_elapsed >  20) {
+                state.state = 'stale';
+                const store = getGlobalSoulStore();
+                const soul = store.get(key);
+                const runtime = ProgramRuntime.getRuntime(soul.programPath);
+                if (runtime) {
+                    console.log('Invoked the idle event for ', state)
+                    runtime.invoke('Idle');
+                    runtime.invoke('idle');
+                    // handle any one of the representation
+                }
+                state.ai = Date.now();
+                this.activityTracker.set(key, state);
+            }
         })
     }
 
     static isIdle(id: string): boolean {
         const state = this.activityTracker.get(id);
         return state ? state.state === 'idle' : false;
-    }
-
-    static trackActivity(id: string, messageState: 'sent' | 'recieved') {
-        let state = this.activityTracker.get(id);
-
-        if (!state) {
-            state = {
-                ai: Date.now(),
-                messageState,
-                state: 'active'
-            }
-        }
-        state.ai = Date.now();
-        this.activityTracker.set(id, state)
     }
 
     static publish_event = async (event: TTCEvents, agent_id: string, data: any) => {
@@ -73,3 +76,6 @@ export class Stream {
 
 
 
+// Stream.init();
+// Stream.trackActivity('me', 'sent');
+// Stream.trackActivity('me', 'recieved');

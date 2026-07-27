@@ -189,6 +189,7 @@ export class ProgramRuntime {
     }
 
     invoke = async (event: string, args?: any) => {
+        // console.log(event, args);
         if (!this.events.has(event)) return;
         const jobId = await this.eventBucket.invoke(event, args);
         return jobId;

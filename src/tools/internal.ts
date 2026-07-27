@@ -250,7 +250,8 @@ Internal.tool({
         return `${soul.name} is keeping quiet`
     },
     func: async (input: {}, id: string) => {
-        console.log('Radio silence')
+        // console.log('Radio silence')
+        Stream.setState(id, 'dormant');
     }
 })
 

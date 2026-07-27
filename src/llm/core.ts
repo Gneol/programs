@@ -27,27 +27,31 @@ export const onCompleteInvokation = async (input: {
     // console.log(input.response.clean, 'CLEAN RESPONSE HERE')
     // here we invoke all the functions, get response and invoke again
     // console.log(input)
-    const store = getGlobalSoulStore();
-    const calls = input.response.clean as f_call[];
-    const responses = await invokationEngine.invoke(input.request, calls)
-
-    if (responses.length > 0) {
-        const message = {
-            role: 'user',
-            content: JSON.stringify(responses)
+    try {
+        const store = getGlobalSoulStore();
+        const calls = input.response.clean as f_call[];
+        const responses = await invokationEngine.invoke(input.request, calls)
+    
+        if (responses.length > 0) {
+            const message = {
+                role: 'user',
+                content: JSON.stringify(responses)
+            }
+            const soul = store.get(input.request);
+            store.addMessage(input.request, message as any);
+            await store.update(soul.id, {
+                outputTokens: (soul.outputTokens || 0) + input.response.usage_metadata.outputTokens,
+                inputTokens: (soul.inputTokens || 0) + input.response.usage_metadata.inputTokens,
+                cachedTokens: (soul.cachedTokens || 0) + input.response.usage_metadata.cachedTokens
+            })
+            // invoke again
+            const modelData = await cacheEngine.get(soul.llm)
+            await modelData.invoke(soul.id);
+        } else {
+            // set activity to idle
         }
-        const soul = store.get(input.request);
-        store.addMessage(input.request, message as any);
-        await store.update(soul.id, {
-            outputTokens: (soul.outputTokens || 0) + input.response.usage_metadata.outputTokens,
-            inputTokens: (soul.inputTokens || 0) + input.response.usage_metadata.inputTokens,
-            cachedTokens: (soul.cachedTokens || 0) + input.response.usage_metadata.cachedTokens
-        })
-        // invoke again
-        const modelData = await cacheEngine.get(soul.llm)
-        await modelData.invoke(soul.id);
-    } else {
-        // set activity to idle
+    } catch (error) {
+        console.error(error.message)
     }
 }
 
@@ -131,6 +135,7 @@ export async function invokeModel(llm: LLMModel, soulId: string): Promise<TaskRe
             state: randomThinkingText('active'),
             type: 'state'
         })
+        Stream.setState(soul.id, 'processing');
         const response = await llm.invoke(messages as any);
 
         console.log(response.content, "RAW");
@@ -196,7 +201,6 @@ export async function invokeModel(llm: LLMModel, soulId: string): Promise<TaskRe
 
         // also even take token metrics
 
-        Stream.trackActivity(soul.id, 'sent');
         Stream.publish_event('llm', conversation_id, {
             state: randomThinkingText('inactive'),
             type: 'state'
