@@ -5,6 +5,8 @@ import { deploy } from './resource';
 import { confirm } from '@clack/prompts';
 import { api } from './api';
 
+import { defaultGneolMdContent } from './defaultGneolMd';
+
 export interface SessionInfo {
   soulId: string;
   programPath: string;
@@ -36,6 +38,14 @@ on("Idle")
   const filePath = path.join(process.cwd(), 'index.gneol');
   fs.writeFileSync(filePath, content, 'utf-8');
   console.log(`Created ${filePath}`);
+
+  // Also write GNEOL.md with default user instructions
+  const gneolMdPath = path.join(process.cwd(), 'GNEOL.md');
+  if (!fs.existsSync(gneolMdPath)) {
+    fs.writeFileSync(gneolMdPath, defaultGneolMdContent, 'utf-8');
+    console.log(`Created ${gneolMdPath}`);
+  }
+
   return filePath;
 }
 
