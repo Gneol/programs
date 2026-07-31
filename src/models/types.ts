@@ -21,6 +21,7 @@ export type BaseModelConfig = {
   temperature: number;
   maxTokens: number;
   baseURL?: string;
+  program?: string;
   rateLimit?: number;
 };
 

@@ -2,15 +2,20 @@ import { TimeCluster, RateLimiter } from "ttc-rate-limit";
 import { ModelMessage, ModelResult, LLMModel } from "./types.js";
 import { TaskResponse } from "./index.js";
 
+
+
+
 export class CacheEngine<T> {
     private cacheStore: Record<string, { value: any; expiresAt: number }> = {};
     private timeCluster: TimeCluster;
 
     constructor() {
         this.timeCluster = new TimeCluster(10);
+        // load up model here
     }
 
     async cache(key: string, value: any, ttl: number): Promise<void> {
+        // we can store the model to survive restarts
         const expiresAt = Date.now() + ttl * 1000;
         this.cacheStore[key] = { value, expiresAt };
         this.timeCluster.waitFor(async () => {
@@ -56,6 +61,7 @@ export type ModelCacheData = {
     rateLimiter: RateLimiter<string, TaskResponse>;
     name: string;
     provider: string;
+    program: string;
     options: {
         temperature: number;
         max_tokens: number;

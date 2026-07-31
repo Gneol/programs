@@ -48,6 +48,23 @@ export class ProgramRuntime {
         // Resolve env files for this program — uses the same static method
         const envStore = ProgramRuntime.resolveEnv(program);
 
+        // ── Model-only program interception ──
+        // If the program declares models but has no actions or subagents,
+        // treat it as a model registration: pre-cache and persist, no soul/runtime.
+        const hasActions = program.actions.length > 0;
+        const hasSubagents = (program.subagentDeclarations || []).length > 0 || (program.sentinelDeclarations || []).length > 0;
+        const hasModelBindings = (program.modelBindings || []).length > 0;
+        if (hasModelBindings && !hasActions && !hasSubagents) {
+            console.log(`Model-only program "${program.title}" — persisting models, no agent created`);
+            // Pre-cache model instances from program bindings
+            try {
+                await preloadModelsFromBindings(program.modelBindings || [], envStore, resolvedPath);
+            } catch (err: any) {
+                console.warn(`Model preload warning for "${program.title}": ${err.message}`);
+            }
+            return { title: program.title, soulId: '', name: '' };
+        }
+
         // Reuse existing runtime or create a new one (keyed by resolved path)
         let runtime = ProgramRuntime.NeuralCore.get(resolvedPath);
         if (runtime) {
@@ -74,16 +91,16 @@ export class ProgramRuntime {
             rootSoul = store.update(rootSoul.id, { llm: program.parentModel || '' });
         }
 
-        console.log(agentId, filePath, rootSoul.name);
+        // console.log(agentId, filePath, rootSoul.name);
         // Apply subagent declarations from the program
         applySubagents(program, rootSoul.id);
 
         // Resolve subagent references in actions (name → id) early, so runtime never sees names
         for (const action of program.actions) {
             if (action.subagent) {
-                console.log('resolving sub agent id', action.subagent)
+                // console.log('resolving sub agent id', action.subagent)
                 action.subagent = resolveSubagentRef(action.subagent, rootSoul.id) ?? undefined;
-                console.log('resolved to ', action.subagent)
+                // console.log('resolved to ', action.subagent)
             }
         }
 
@@ -104,7 +121,7 @@ export class ProgramRuntime {
 
         // Pre‑cache model instances from program bindings
         try {
-            await preloadModelsFromBindings(program.modelBindings || [], envStore);
+            await preloadModelsFromBindings(program.modelBindings || [], envStore, resolvedPath);
         } catch (err: any) {
             console.warn(`Model preload warning for "${program.title}": ${err.message}`);
         }

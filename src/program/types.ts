@@ -9,6 +9,7 @@ export type ModelBinding = {
     outputTokens?: number;
     cachedTokens?: number;
     apiKey?: string;
+    programPath?: string;
     temperature?: number;
     maxTokens?: number;
     rateLimit?: number;

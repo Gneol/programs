@@ -74,22 +74,24 @@ export class GneolServer {
                         name: v.name,
                         provider: v.provider,
                         options: v.options,
-                        cached: true
+                        program: v.program
+                        // cached: true
                     });
                 }
 
                 for (const rt of runtimes) {
                     for (const binding of rt.program.modelBindings || []) {
-                        const alreadyCached = models.some(m => m.id === `${binding.provider}:${binding.modelId}`);
-                        if (!alreadyCached) {
-                            models.push({
-                                tag: binding.tag,
-                                modelId: binding.modelId,
-                                provider: binding.provider,
-                                program: rt.program.title,
-                                cached: false
-                            });
-                        }
+                        // console.log(models)
+                        // const alreadyCached = models.some(m => m.id === binding.tag);
+                        // if (!alreadyCached) {
+                        //     models.push({
+                        //         tag: binding.tag,
+                        //         modelId: binding.modelId,
+                        //         provider: binding.provider,
+                        //         program: rt.program.title,
+                        //         // cached: false
+                        //     });
+                        // }
                     }
                 }
 
@@ -109,13 +111,14 @@ export class GneolServer {
             }
 
             case 'tool': {
-                const tools: { name: string; scriptPath: string; program: string }[] = [];
+                const tools: { name: string; scriptPath: string; program: string, programPath: string }[] = [];
                 for (const rt of runtimes) {
                     for (const toolDef of rt.program.toolDefs || []) {
                         tools.push({
                             name: toolDef.name,
                             scriptPath: toolDef.scriptPath,
-                            program: rt.program.title
+                            program: rt.program.title,
+                            programPath: rt.program.path
                         });
                     }
                 }
@@ -124,13 +127,14 @@ export class GneolServer {
             }
 
             case 'event': {
-                const events: { marker: string; instructions: string[]; program: string }[] = [];
+                const events: { marker: string; instructions: string[]; program: string, programPath: string  }[] = [];
                 for (const rt of runtimes) {
                     for (const action of rt.program.actions.filter(a => a.type === 'event')) {
                         events.push({
                             marker: action.marker,
                             instructions: action.instructions,
-                            program: rt.program.title
+                            program: rt.program.title,
+                            programPath: rt.program.path
                         });
                     }
                 }
@@ -139,13 +143,14 @@ export class GneolServer {
             }
 
             case 'schedule': {
-                const schedules: { marker: string; instructions: string[]; program: string }[] = [];
+                const schedules: { marker: string; instructions: string[]; program: string, programPath: string }[] = [];
                 for (const rt of runtimes) {
                     for (const action of rt.program.actions.filter(a => a.type === 'time')) {
                         schedules.push({
                             marker: action.marker,
                             instructions: action.instructions,
-                            program: rt.program.title
+                            program: rt.program.title,
+                            programPath: rt.program.path
                         });
                     }
                 }

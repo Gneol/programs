@@ -150,7 +150,7 @@ program
 import { initializeSession } from './cli-utils/init.js';
 
 program
-  .command('init')
+  // .command('cli')
   .description('Initialize a Gneol session in the current directory')
   .option('-i, --id <id>', 'The agent id')
   .option('-a, --agent', 'List and select an existing agent')
@@ -262,10 +262,10 @@ export default program;
 // If run directly
 if (require.main === module) {
   // If no command given, default to 'init'
-  const args = process.argv.slice(2);
-  if (args.length === 0 || args[0].startsWith('-')) {
-    program.parse(['node', 'gneol-cli', 'init', ...args]);
-  } else {
+  // const args = process.argv.slice(2);
+  // if (args.length === 0 || args[0].startsWith('-')) {
+    // program.parse(['node', 'gneol-cli', 'init', ...args]);
+  // } else {
     program.parse(process.argv);
-  }
+  // }
 }

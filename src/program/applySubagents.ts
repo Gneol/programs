@@ -13,8 +13,8 @@ import { getGlobalSoulStore, Soul } from '../db/program';
  * The subagent's parentId is set to the root soul ID associated with this program.
  */
 export function applySubagents(program: GneolProgram, rootSoulId: string): void {
-    console.log('APPLY SUBAGENTS CALLED with program:', program.title, 'rootSoulId:', rootSoulId);
-    console.log('Subagent declarations:', program.subagentDeclarations);
+    // console.log('APPLY SUBAGENTS CALLED with program:', program.title, 'rootSoulId:', rootSoulId);
+    // console.log('Subagent declarations:', program.subagentDeclarations);
     const declarations = program.subagentDeclarations;
     if (!declarations || declarations.length === 0) {
         return;

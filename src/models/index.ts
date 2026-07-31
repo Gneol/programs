@@ -65,6 +65,7 @@ async function createLLMInstance(config: BaseModelConfig): Promise<LLMModel> {
 
 export async function ModelInstance(config: BaseModelConfig): Promise<ModelCacheData> {
   const cacheKey = config.tag ?? `${config.provider}:${config.model}`;
+  // console.log(cacheKey, 'CACHE KEY!!');
   const cached = await cacheEngine.get(cacheKey);
   if (cached) return cached;
 
@@ -97,6 +98,7 @@ export async function ModelInstance(config: BaseModelConfig): Promise<ModelCache
   const data: ModelCacheData = {
     id: cacheKey,
     llm,
+    program: config.program,
     rateLimiter,
     name: config.model,
     provider: config.provider,
@@ -112,16 +114,23 @@ export async function ModelInstance(config: BaseModelConfig): Promise<ModelCache
   return data;
 }
 
+
 /** Pre‑seed the model cache from the model bindings declared in a program */
 export async function preloadModelsFromBindings(
   bindings: ModelBinding[],
-  envStore: Record<string, string> = {}
+  envStore: Record<string, string> = {},
+  programPath: string
 ): Promise<void> {
+
   for (const binding of bindings) {
     if (!binding.provider) {
       console.warn(`Model binding "${binding.tag}" has no provider; skipping.`);
       continue;
     }
+    
+    // if(cacheEngine.get(binding.tag)){
+    //   continue;
+    // }
 
     // Resolve apiKey: look up in envStore, then process.env, then fallback to literal
     let resolvedKey: string | undefined;
@@ -136,6 +145,7 @@ export async function preloadModelsFromBindings(
       temperature: binding.temperature ?? 0.7,
       maxTokens: binding.maxTokens ?? 2048,
       apiKey: resolvedKey,
+      program: programPath,
       rateLimit: binding.rateLimit,
     };
     try {

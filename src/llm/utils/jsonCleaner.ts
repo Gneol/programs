@@ -22,15 +22,12 @@ export class gneolJSONCleaner {
         return await this.fixJSONerrors(error, output, llm_instance);
     }
 
-    async interceptedStrangeYaml(input: string) {
-        if (input.includes('<｜｜DSML｜｜tool_calls>') && input.includes('</｜｜DSML｜｜tool_calls>')) {
-            // console.log(input)
+    async interceptedStrangeYaml(_input: string) {
+        let input = _input.trim();
+        if (input.includes('<｜｜DSML｜｜')) {
+            console.log(input)
             return true;
         }
-
-        // if(input.startsWith('<')){
-        //     return true;
-        // }
 
         if (input.includes('<FunctionCalls>')) {
             return true;
@@ -52,6 +49,10 @@ export class gneolJSONCleaner {
         }
 
         if (input.includes('</Invoke>')) {
+            return true;
+        }
+
+        if(input.startsWith('<')){
             return true;
         }
 
