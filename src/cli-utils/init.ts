@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { AgentRecord, fetchAgents, getAgent, resolveAgentId } from './soul';
-import { deploy } from './resource';
+import { deploy, validateModelEnv } from './resource';
 import { confirm } from '@clack/prompts';
 import { api } from './api';
 
@@ -23,7 +23,7 @@ function scaffoldIndexGneol(): string {
 model("primary")
   .provider("deepseek")
   .modelId("deepseek-v4-flash")
-  .apiKey("OPENROUTER_API_KEY")
+  .apiKey("DEEPSEEK_API_KEY")
   .temperature(0.7)
   .maxTokens(60000)
 
@@ -257,5 +257,10 @@ export async function initializeSession(opts?: { id?: string; agent?: boolean })
 
   // Otherwise deploy the selected/newly created file
   console.log(`Deploying ${filePath}…`);
-  return await deploy(filePath);
+  const result = await deploy(filePath);
+
+  // After successful deploy, validate model env vars
+  await validateModelEnv(filePath);
+
+  return result;
 }

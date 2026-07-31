@@ -4,6 +4,7 @@ import { showPrompt } from "../utils/prompt";
 import { listTools, createTool, viewTool, editTool, deleteTool } from "../tools/ui";
 import { showMCPMenu } from "../mcp/ui";
 import { listModels, addModel, updateModel, deleteModel } from "../models/ui";
+import { showSecretsList } from "../secrets/ui";
 import fs from 'fs';
 
 
@@ -172,6 +173,10 @@ Available commands:
         }
     })
 
+
+    registerCommand('secrets', async () => {
+        await showSecretsList();
+    })
 
     registerCommand('models', async ()=> {
         const action = await showPrompt({

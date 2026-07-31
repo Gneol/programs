@@ -10,6 +10,7 @@ import { invokationEngine } from "./llm/invoke.js";
 import { Stream } from "./db/stream.js";
 import { llm_message_internal } from "./llm/utils/types.js";
 import { markForRebuild } from "./llm/system_message.js";
+import { storeToken, getToken, removeToken, listTokens } from "./tokenStore.js";
 
 
 export class GneolServer {
@@ -277,6 +278,54 @@ export class GneolServer {
 
 
 
+
+
+    // ── Secrets (encrypted token store) ──
+
+    @ttc.describe({
+        doc: 'store a secret (API key or token)',
+        parameterSchema: z.object({
+            key: z.string(),
+            value: z.string()
+        })
+    })
+    storeSecret(key: string, value: string) {
+        storeToken(key, value);
+        return 'stored';
+    }
+
+    @ttc.describe({
+        doc: 'retrieve a secret (returns masked confirmation, not the actual value)',
+        parameterSchema: z.object({
+            key: z.string()
+        })
+    })
+    getSecret(key: string) {
+        const val = getToken(key);
+        if (val === null) throw new Error(`Secret "${key}" not found.`);
+        return 'exists';
+    }
+
+    @ttc.describe({
+        doc: 'remove a secret',
+        parameterSchema: z.object({
+            key: z.string()
+        })
+    })
+    removeSecret(key: string) {
+        const existed = removeToken(key);
+        if (!existed) throw new Error(`Secret "${key}" not found.`);
+        return 'removed';
+    }
+
+    @ttc.describe({
+        doc: 'list all stored secret keys',
+        parameterSchema: z.object({})
+    })
+    listSecrets() {
+        return listTokens();
+    }
+
     @ttc.describe({
         doc: 'deploy a .gneol program file',
         parameterSchema: z.object({
@@ -284,6 +333,7 @@ export class GneolServer {
         })
     })
     async deploy(programPath: string) {
+
         const result = await ProgramRuntime.deployProgram(programPath);
         const runtime = ProgramRuntime.getRuntimeByTitle(result.title);
         if (runtime) {

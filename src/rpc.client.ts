@@ -360,6 +360,42 @@ export class RPCClient {
             return await RPCClient.apiCallback('GneolServer.trigger', [id, message]);
         },
         /**
+         * store a secret (API key or token)
+         *
+         * @param {key: string, value: string}
+         * @returns {Promise<rpcResponseType<any>>}
+         */
+        async storeSecret(key: string, value: string): Promise<rpcResponseType<any>> {
+            return await RPCClient.apiCallback('GneolServer.storeSecret', [key, value]);
+        },
+        /**
+         * retrieve a secret (returns masked confirmation, not the actual value)
+         *
+         * @param {key: string}
+         * @returns {Promise<rpcResponseType<any>>}
+         */
+        async getSecret(key: string): Promise<rpcResponseType<any>> {
+            return await RPCClient.apiCallback('GneolServer.getSecret', [key]);
+        },
+        /**
+         * remove a secret
+         *
+         * @param {key: string}
+         * @returns {Promise<rpcResponseType<any>>}
+         */
+        async removeSecret(key: string): Promise<rpcResponseType<any>> {
+            return await RPCClient.apiCallback('GneolServer.removeSecret', [key]);
+        },
+        /**
+         * list all stored secret keys
+         *
+         * @param {}
+         * @returns {Promise<rpcResponseType<any>>}
+         */
+        async listSecrets(): Promise<rpcResponseType<any>> {
+            return await RPCClient.apiCallback('GneolServer.listSecrets');
+        },
+        /**
          * deploy a .gneol program file
          *
          * @param {programPath: string}

@@ -1,5 +1,6 @@
 import { pushSystemMessage } from "../interface/chat"
 import { invokeCli } from "./cliInvoke"
+import { api } from "../../cli-utils/api.js";
 
 type CommandHandler = (args: string[]) => void
 
@@ -40,6 +41,7 @@ export function getRegisteredCommands() {
 }
 
 export function filterCommands(filter: string): string[] {
+
   const commands = getRegisteredCommands();
   if (!filter) return commands;
   return commands.filter(cmd => 

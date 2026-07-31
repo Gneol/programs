@@ -10,6 +10,7 @@ import { Action, GneolProgram, IfExecType } from './types';
 import { applySubagents, resolveSubagentRef } from './applySubagents';
 import { getGlobalSoulStore, Soul } from '../db/program';
 import { cacheEngine, ModelInstance, preloadModelsFromBindings } from '../models';
+import { getToken } from '../tokenStore';
 import { ProgramToolManager } from '../tools/utils/ProgramToolManager';
 import { markForRebuild } from '../llm/system_message';
 
@@ -155,10 +156,29 @@ export class ProgramRuntime {
                 envFileToLoad = program.env.startsWith('/') ? program.env : `${programDir}/${program.env}`;
             }
         }
+        let envStore: Record<string, string> = {};
         if (envFileToLoad) {
-            return parseEnvFile(envFileToLoad, {});
+            envStore = parseEnvFile(envFileToLoad, {});
         }
-        return {};
+
+        // Fallback to token store for any model binding env vars not already set
+        if (program.modelBindings) {
+            for (const binding of program.modelBindings) {
+                if (binding.apiKey && !envStore[binding.apiKey] && !process.env[binding.apiKey]) {
+                    try {
+                        const token = getToken(binding.apiKey);
+                        if (token) {
+                            envStore[binding.apiKey] = token;
+                            process.env[binding.apiKey] = token;
+                        }
+                    } catch {
+                        // tokenStore not available or corrupted — continue
+                    }
+                }
+            }
+        }
+
+        return envStore;
     }
 
     formatAction(program: GneolProgram, action: Action): string {
@@ -198,13 +218,13 @@ export class ProgramRuntime {
     refresh = (program: GneolProgram, envStore?: Record<string, string>) => {
         this.program = program;
         this.envStore = envStore ?? ProgramRuntime.resolveEnv(program);
-        this.stripEvents(program);
-        this.eventBucket = new GneolEventBucket(this.eventBucketCallback);
-        this.stripEvents(program);
         this.events.clear();
-        program.actions.forEach(a => { if (a.type === 'event') this.events.add(a.marker); });
+        this.eventBucket = new GneolEventBucket(this.eventBucketCallback);
         program.actions.forEach(a => {
-            if (a.type === 'event') this.eventBucket.initBucket(a, program);
+            if (a.type === 'event') {
+                this.events.add(a.marker);
+                this.eventBucket.initBucket(a, program);
+            }
         });
     }
 

@@ -158,6 +158,7 @@ program
     try {
       const { soulId, programPath, name } = await initializeSession({ id: opts.id, agent: opts.agent });
       // program should be deployed
+      console.log(soulId, programPath, name);
       await startChat(soulId, name, programPath);
     } catch (err: any) {
       console.error(err.message);
@@ -185,6 +186,62 @@ program
   });
 
 // ─── Stop Server ───
+
+// ─── Secrets (encrypted API key store) ───
+
+program
+  .command('secrets')
+  .description('Manage encrypted API key store via server')
+  .argument('<action>', 'Action: list, get, set, delete')
+  .argument('[key]', 'Key name')
+  .argument('[value]', 'Value (for set)')
+  .action(async (action: string, key?: string, value?: string) => {
+    const { api } = await import('./cli-utils/api.js');
+    try {
+      switch (action) {
+        case 'list': {
+          const res = await api.GneolServer.listSecrets();
+          if (res.status === 'error') throw new Error(res.data);
+          const keys = res.data as string[];
+          if (keys.length === 0) {
+            console.log('No secrets stored.');
+          } else {
+            console.log(`Stored secrets:\n${keys.map(k => `  - ${k}`).join('\n')}`);
+          }
+          break;
+        }
+        case 'get': {
+          if (!key) { console.error('Usage: gneol-cli secrets get <key>'); process.exit(1); }
+          const res = await api.GneolServer.getSecret(key);
+          if (res.status === 'error') throw new Error(res.data);
+          console.log(`Secret "${key}" found.`);
+          break;
+        }
+        case 'set': {
+          if (!key || !value) { console.error('Usage: gneol-cli secrets set <key> <value>'); process.exit(1); }
+          const res = await api.GneolServer.storeSecret(key, value);
+          if (res.status === 'error') throw new Error(res.data);
+          console.log(`Secret "${key}" stored.`);
+          break;
+        }
+        case 'delete': {
+          if (!key) { console.error('Usage: gneol-cli secrets delete <key>'); process.exit(1); }
+          const res = await api.GneolServer.removeSecret(key);
+          if (res.status === 'error') throw new Error(res.data);
+          console.log(`Secret "${key}" deleted.`);
+          break;
+        }
+        default:
+          console.error('Unknown action. Use: list, get, set, delete');
+          process.exit(1);
+      }
+    } catch (err: any) {
+      console.error(err.message);
+      process.exit(1);
+    }
+    process.exit(0);
+  });
+
 
 
 program

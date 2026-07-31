@@ -668,6 +668,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ assistant }) => {
         <Box flexGrow={1}>
           {!promptState.isActive ? (
             <TextInput
+              // @ts-expect-error key prop triggers remount for cursor reset
               key={inputKey}
               value={input}
               onChange={handleInputChange}

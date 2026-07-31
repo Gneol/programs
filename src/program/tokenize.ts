@@ -127,7 +127,7 @@ export function tokenizeFile(filePath: string): IState {
         }
         if (a.resources && a.resources.length > 0) data.resource = a.resources[0];
         if (a.maxTrigger !== undefined) data.max = a.maxTrigger;
-        if (a.sentinel) data.sentinel = a.sentinel;
+        if (a.subagent) data.sentinel = a.subagent;
         if (a.modify) data.modify = true;
         push(id, 'at', data);
       } else if (a.type === 'event') {
@@ -143,7 +143,7 @@ export function tokenizeFile(filePath: string): IState {
           if (a.eventOptions.delay !== undefined) data.delay = a.eventOptions.delay;
         }
         if (a.maxTrigger !== undefined) data.max = a.maxTrigger;
-        if (a.sentinel) data.sentinel = a.sentinel;
+        if (a.subagent) data.sentinel = a.subagent;
         if (a.modify) data.modify = true;
         push(id, 'on', data);
       }

@@ -1,4 +1,13 @@
-export const defaultGneolMdContent = `# User Instructions for Gneol Agent
+export const defaultGneolMdContent = `# User Profile
+
+- **Name:** {Your Name}
+- **Profession:** {Your Profession}
+- **Vision:** {What you aim to achieve}
+- **Bio:** {A short description about yourself}
+
+---
+
+# User Instructions for Gneol Agent
 
 ## 1. Communication Style
 - Be concise and professional. Avoid unnecessary verbosity.
@@ -19,6 +28,8 @@ export const defaultGneolMdContent = `# User Instructions for Gneol Agent
 - Define clear handoff conditions.
 - Subagents must report results back to the parent agent.
 - Use structured task manifests for multi-step workflows.
+- Do not take over the task of a sub agent unless entirely neccesary
+- Do not micro manage, imbibe the habit of delegation and supervision
 
 ## 5. Error Recovery
 - If a task fails, diagnose and retry with corrected parameters.

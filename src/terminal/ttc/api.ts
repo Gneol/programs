@@ -1,6 +1,7 @@
 import { Program, Server } from 'gneol-sdk';
 import path from 'path';
 import os from 'os';
+import net from 'net';
 import { GneolEventEmitter } from 'gneol-sdk/dist/server/event';
 import { pushSystemMessage } from '../interface/chat';
 
@@ -28,11 +29,31 @@ export class Assistant {
         return this.assistantId;
     }
 
+    /** Check if a port is available by trying to bind to it */
+    private async isPortAvailable(port: number): Promise<boolean> {
+        return new Promise((resolve) => {
+            const server = net.createServer();
+            server.once('error', () => resolve(false));
+            server.once('listening', () => {
+                server.close(() => resolve(true));
+            });
+            server.listen(port, '0.0.0.0');
+        });
+    }
+
     async init(): Promise<void> {
-        const event = await this.server.serve(3011, [])
-        this.actionClient = event
+        // Find first available port starting from 3011
+        let port = 3011;
+        const maxAttempts = 20;
+        for (let i = 0; i < maxAttempts; i++) {
+            if (await this.isPortAvailable(port)) break;
+            port++;
+        }
+        console.log(`Starting assistant API on port ${port}`);
+        const event = await this.server.serve(port, []);
+        this.actionClient = event;
         this.actionClient.setAgent(this.assistantId);
-        console.log("SETTING IT UP HERE")
+        console.log("Assistant API ready on port", port);
     }
 
     private async _ensureReady(): Promise<void> {
