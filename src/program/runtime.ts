@@ -13,6 +13,8 @@ import { cacheEngine, ModelInstance, preloadModelsFromBindings } from '../models
 import { getToken } from '../tokenStore';
 import { ProgramToolManager } from '../tools/utils/ProgramToolManager';
 import { markForRebuild } from '../llm/system_message';
+import { syncMcpToolsSource } from '../mcp';
+import { f_schema } from '../llm/utils/types';
 
 
 export class ProgramRuntime {
@@ -21,7 +23,7 @@ export class ProgramRuntime {
     static isInitialized: boolean;
     agentId: string;
     program: GneolProgram;
-    mcpTools: any[];
+    mcpTools: f_schema[];
     events: Set<string> = new Set();
     eventBucket: GneolEventBucket;
     _scid: string;
@@ -52,7 +54,7 @@ export class ProgramRuntime {
         // If the program declares models but has no actions or subagents,
         // treat it as a model registration: pre-cache and persist, no soul/runtime.
         const hasActions = program.actions.length > 0;
-        const hasSubagents = (program.subagentDeclarations || []).length > 0 || (program.sentinelDeclarations || []).length > 0;
+        const hasSubagents = (program.subagentDeclarations || []).length > 0;
         const hasModelBindings = (program.modelBindings || []).length > 0;
         if (hasModelBindings && !hasActions && !hasSubagents) {
             console.log(`Model-only program "${program.title}" — persisting models, no agent created`);
@@ -137,6 +139,25 @@ export class ProgramRuntime {
                 const resolvedPath = fspath.resolve(programDir, def.scriptPath);
                 def.scriptPath = resolvedPath;
                 await ProgramToolManager.addTool(this._scid, this.agentId, resolvedPath);
+            } catch (error) {
+                console.error(error.message);
+            }
+        }
+    }
+
+    handleMcpConfigs = async (program: GneolProgram) => {
+        // console.log('handling mcp scripts...', program.mcpConfigs)
+        if (!program.mcpConfigs || Object.keys(program.mcpConfigs).length === 0)
+            return;
+        const programDir = program.path.substring(0, program.path.lastIndexOf('/'));
+        for (const [name, decl] of Object.entries(program.mcpConfigs)) {
+            try {
+                const tools = await syncMcpToolsSource(decl.config, programDir, {
+                    tokens: decl.tokens,
+                    serverName: name,
+                });
+                console.log(tools);
+                this.mcpTools = [...(this.mcpTools || []), ...tools];
             } catch (error) {
                 console.error(error.message);
             }
@@ -303,6 +324,7 @@ export class ProgramRuntime {
             const runtime = ProgramRuntime.NeuralCore.get(fspath.resolve(soul.programPath));
             if (runtime) runtime.agentId = soul.id;
             await runtime.handleToolDefinitions(runtime.program);
+            await runtime.handleMcpConfigs(runtime.program);
             // console.log(`Loaded soul "${soul.id}" → program "${result.title}"`);
         } catch (err: any) {
             console.warn(`Failed to load soul "${soul.id}": ${err.message}`);
@@ -324,7 +346,7 @@ export class ProgramRuntime {
                     markForRebuild(soul.id, true)
                 } else {
                     // create one na
-                    
+
                 }
             } catch (error) {
                 console.log(String(error));
@@ -466,6 +488,9 @@ export class ProgramRuntime {
             return ProgramToolManager.getDefinition(def.scriptPath);
         }));
 
+        const mcpFunctions = this.mcpTools;
+        response.push(mcpFunctions);
+
         return response.filter(d => d) || []
     }
 
@@ -507,19 +532,23 @@ export class ProgramRuntime {
 
 
     trigger = async (message: string, id?: string) => {
-        const store = getGlobalSoulStore();
-        const chat = await store.get(id || this.agentId);
-        const modelData = await cacheEngine.get(chat.llm);
-        const format_message = JSON.stringify([{
-            function: "TTCInternal.trigger",
-            response: {
-                message: message
-            }
-        }]);
-        store.addMessage(chat.id, {
-            role: 'user',
-            content: JSON.stringify(format_message)
-        });
-        await modelData?.invoke(chat.id)
+        try {
+            const store = getGlobalSoulStore();
+            const chat = await store.get(id || this.agentId);
+            const modelData = await cacheEngine.get(chat.llm);
+            const format_message = JSON.stringify([{
+                function: "Internal.trigger",
+                response: {
+                    message: message
+                }
+            }]);
+            store.addMessage(chat.id, {
+                role: 'user',
+                content: JSON.stringify(format_message)
+            });
+            await modelData?.invoke(chat.id);
+        } catch (error) {
+            console.log(error.message)
+        }
     }
 }

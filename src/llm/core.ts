@@ -2,7 +2,7 @@
 // This function will be expanded to fetch messages from memory using soulId
 // and orchestrate the full LLM invocation including streaming, context, etc.
 
-import { LLMModel, ModelResult } from '../models/types.js';
+import { LLMModel } from '../models/types.js';
 import { getGlobalSoulStore, Soul } from '../db/program.js';
 import { gneolJSONCleaner } from './utils/jsonCleaner.js';
 import { f_call, f_response, llmOutput, llmOutputType } from './utils/types.js';

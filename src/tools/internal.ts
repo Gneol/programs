@@ -243,7 +243,7 @@ Internal.tool({
 
 Internal.tool({
     name: 'keepQuiet',
-    description: 'call this function is you have nothing to say',
+    description: 'call this function is you have nothing to say and you can also call this to truly tell the user you are done to avoid the event triggers trying to ensure you are doing and have not broken chain of execution',
     parameters: z.object(),
     async action(input, id) {
         const soul = store.get(id);

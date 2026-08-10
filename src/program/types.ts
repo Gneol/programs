@@ -55,6 +55,11 @@ export interface ToolDef {
 
 export type PermissionLevel = 'ask' | 'dynamic' | 'allow';
 
+export interface McpConfigDeclaration {
+    config: string;
+    tokens?: string[];
+}
+
 export interface GneolProgram {
     title: string;
     name?: string;
@@ -67,10 +72,9 @@ export interface GneolProgram {
     summarizationModel?: string;
     summarizationPrompt?: string;
     subagentDeclarations?: SubagentDeclaration[];
-    sentinelDeclarations?: SubagentDeclaration[];
     wildcardModel?: string;
     modelBindings?: ModelBinding[];
-    mcpConfigs?: Record<string, string>;
+    mcpConfigs?: Record<string, McpConfigDeclaration>;
     toolDefs?: ToolDef[];
     env?: string;
     agentId?: string;

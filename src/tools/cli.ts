@@ -15,28 +15,28 @@ import { markForRebuild } from '../llm/system_message';
 export const CliModule = new Module('Cli');
 
 
-    CliModule.tool({
-        name: 'setWorkspace',
-        description: "Change the current workspace directory for the agent",
-        action: async (input: any) => {
-            return `changing workspace to ${input.path}`;
-        },
-        parameters: z.object({
-            path: z.string().describe("Absolute or relative path to set as the workspace directory")
-        }),
-        func: async (input: { path: string }, id: string): Promise<any> => {
-            const store = getGlobalSoulStore();
-            const soul = store.get(id);
-            if (soul) {
-                await store.update(soul.id, {
-                    workSpace: input.path
-                })
+CliModule.tool({
+    name: 'setWorkspace',
+    description: "Change the current workspace directory for the agent",
+    action: async (input: any) => {
+        return `changing workspace to ${input.path}`;
+    },
+    parameters: z.object({
+        path: z.string().describe("Absolute or relative path to set as the workspace directory")
+    }),
+    func: async (input: { path: string }, id: string): Promise<any> => {
+        const store = getGlobalSoulStore();
+        const soul = store.get(id);
+        if (soul) {
+            await store.update(soul.id, {
+                workSpace: input.path
+            })
 
-                markForRebuild(id, true);
-            }
-            return `Workspace set to ${input.path}`
+            markForRebuild(id, true);
         }
-    })
+        return `Workspace set to ${input.path}`
+    }
+})
 
 
 const normalizePath = (p: string): string => {
@@ -76,10 +76,7 @@ CliModule.tool({
         if (level === 'allow') {
             return false;
         }
-        if (level === 'ask') {
-            return `Requesting permission to execute: "${command}"`;
-        }
-        if (isDangerousCommand(command)) {
+        if (level === 'ask' || isDangerousCommand(command)) {
             return `Requesting permission to execute: "${command}"`;
         }
     },

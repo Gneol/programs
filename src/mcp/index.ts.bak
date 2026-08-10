@@ -1,0 +1,339 @@
+// import fs from 'fs/promises';
+import path from 'path';
+import os from 'os';
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { z } from 'zod';
+import { zodToTs } from '../llm/utils/zodToTs';
+import { Stream } from '../db/stream';
+import { markForRebuild } from '../llm/system_message';
+
+export type f_call = {
+    function: string;
+    arguments: Record<string, any>;
+}
+
+
+// Map server name -> { client, transport } for persistent connections
+const clients = new Map<string, { client: Client; transport: any; server: MCPServer }>();
+
+// Minimal f_call replacement for MCP tool invocation
+async function f_call(method: string, params: any): Promise<any> {
+    if (method === 'mcp.callTool') {
+        const { server, tool, args } = params;
+        const entry = clients.get(server);
+        if (!entry) throw new Error(`MCP server "${server}" not connected`);
+        const result = await entry.client.request({
+            method: 'tools/call',
+            params: { name: tool, arguments: args }
+        }, {} as any);
+        return result;
+    }
+    throw new Error(`Unsupported MCP method: ${method}`);
+}
+
+function createTransport(server: MCPServer): any {
+    if (server.type === 'stdio' && server.command) {
+        return new StdioClientTransport({
+            command: server.command,
+            args: server.args,
+            env: server.env
+        });
+    }
+    return new StreamableHTTPClientTransport(new URL(server.url));
+}
+
+async function connectClient(server: MCPServer): Promise<Client> {
+    const transport = createTransport(server);
+    const client = new Client(
+        { name: 'gneol-mcp', version: '1.0.0' },
+        { capabilities: {} }
+    );
+    await client.connect(transport);
+    clients.set(server.name, { client, transport, server });
+    return client;
+}
+
+async function disconnectClient(serverName: string): Promise<void> {
+    const entry = clients.get(serverName);
+    if (entry) {
+        try { await entry.client.close(); } catch { }
+        clients.delete(serverName);
+    }
+}
+
+async function getOrCreateClient(server: MCPServer): Promise<Client> {
+    const existing = clients.get(server.name);
+    if (existing) return existing.client;
+    return connectClient(server);
+}
+
+export async function disconnectAll(): Promise<void> {
+    for (const name of clients.keys()) {
+        await disconnectClient(name);
+    }
+}
+
+export async function connectAll(): Promise<void> {
+    const servers = await loadServers();
+    const enabled = servers.filter(s => s.enabled);
+    for (const server of enabled) {
+        try {
+            if (!clients.has(server.name)) {
+                await connectClient(server);
+            }
+        } catch (err: any) {
+            console.error(`MCP: Failed to connect to ${server.name}: ${err.message}`);
+        }
+    }
+}
+
+export type MCPTransportType = 'http' | 'stdio';
+
+export interface MCPServer {
+    name: string;
+    type: MCPTransportType;
+    url: string;
+    command?: string;
+    args?: string[];
+    env?: Record<string, string>;
+    enabled: boolean;
+}
+
+export type RPCMethodInfo = {
+    name: string;
+    description?: string;
+    permission?: boolean;
+    input_schema?: string;
+    output_schema?: string;
+}
+
+const CONFIG_PATH = path.join(os.homedir(), '.gneol', 'mcp-servers.json');
+
+async function loadServers(): Promise<MCPServer[]> {
+    try {
+        const data = await fs.readFile(CONFIG_PATH, 'utf-8');
+        return JSON.parse(data);
+    } catch {
+        return [];
+    }
+}
+
+async function saveServers(servers: MCPServer[]): Promise<void> {
+    await fs.mkdir(path.dirname(CONFIG_PATH), { recursive: true });
+    await fs.writeFile(CONFIG_PATH, JSON.stringify(servers, null, 2));
+}
+
+export async function listServers(): Promise<MCPServer[]> {
+    return loadServers();
+}
+
+
+// Claude-like config format: { mcpServers: { name: { command, args, url, env } } }
+interface GneolMCPServerConfig {
+    command?: string;
+    args?: string[];
+    url?: string;
+    env?: Record<string, string | number | boolean>;
+}
+
+interface GneolMCPConfig {
+    mcpServers: Record<string, GneolMCPServerConfig>;
+}
+
+export async function importFromConfig(filePath: string): Promise<{ added: number; skipped: string[] }> {
+    const raw = await fs.readFile(filePath, 'utf-8');
+    const config: GneolMCPConfig = JSON.parse(raw);
+    const servers = config.mcpServers;
+    if (!servers) throw new Error('Config must have an "mcpServers" object');
+
+    const skipped: string[] = [];
+    let added = 0;
+
+    for (const [name, cfg] of Object.entries(servers)) {
+        if (cfg.url) {
+            // HTTP/SSE transport
+            try {
+                await addServer(name, cfg.url, 'http');
+                added++;
+            } catch (e: any) {
+                skipped.push(`${name}: ${e.message}`);
+            }
+        } else if (cfg.command) {
+            // stdio transport
+            try {
+                const stringEnv = cfg.env ? Object.fromEntries(
+                    Object.entries(cfg.env).map(([k, v]) => [k, String(v)])
+                ) : undefined;
+                await addServer(name, cfg.command, 'stdio', cfg.args ?? [], stringEnv);
+                added++;
+            } catch (e: any) {
+                skipped.push(`${name}: ${e.message}`);
+            }
+        } else {
+            skipped.push(`${name}: no url or command found`);
+        }
+    }
+
+    return { added, skipped };
+}
+export async function addServer(name: string, urlOrCommand: string, type?: MCPTransportType, args?: string[], env?: Record<string, string>): Promise<void> {
+
+    const servers = await loadServers();
+    if (servers.find(s => s.name === name)) {
+        throw new Error(`Server "${name}" already exists`);
+    }
+    const transportType: MCPTransportType = type || 'http';
+    const server: MCPServer = {
+        name,
+        type: transportType,
+        url: transportType === 'http' ? urlOrCommand : '',
+        command: transportType === 'stdio' ? urlOrCommand : undefined,
+        args: transportType === 'stdio' ? args : undefined,
+        env,
+        enabled: true,
+    };
+    servers.push(server);
+    await saveServers(servers);
+}
+
+export async function callTool(id: string, call: f_call): Promise<any> {
+    try {
+        const [_, serverName, tool] = call.function.split('.');
+        // const event = ttc as any;
+        Stream.publish_event('action_log', id, {
+            id: id,
+            payload: `mcp.${serverName}.${tool}(${JSON.stringify(call.arguments, null, 2)})`
+        });
+        console.log(JSON.stringify(call))
+
+        const existing = clients.get(serverName);
+        if (existing) {
+            return existing.client.callTool({ name: tool, arguments: call.arguments });
+        }
+
+        const configs = await loadServers();
+        const config = configs.find(c => c.name === serverName);
+        if (!config) throw new Error(`MCP server "${serverName}" not found`);
+        const client = await connectClient(config);
+        return client.callTool({ name: tool, arguments: call.arguments });
+    } catch (error) {
+        console.log(error.message)
+        throw new Error(`${error.message}`)
+    }
+}
+
+
+export async function removeServer(name: string): Promise<void> {
+    let servers = await loadServers();
+    servers = servers.filter(s => s.name !== name);
+    await saveServers(servers);
+}
+
+export async function toggleServer(name: string): Promise<void> {
+    const servers = await loadServers();
+    const server = servers.find(s => s.name === name);
+    if (!server) throw new Error(`Server "${name}" not found`);
+    server.enabled = !server.enabled;
+    await saveServers(servers);
+}
+
+
+const MCP_TOOLS_PATH = path.join(os.homedir(), '.gneol', 'mcp-tools.json');
+
+/** Fetch tools from a single MCP server using the SDK */
+async function fetchToolsFromServer(server: MCPServer): Promise<any[]> {
+    let transport;
+
+    if (server.type === 'stdio' && server.command) {
+        transport = new StdioClientTransport({
+            command: server.command,
+            args: server.args,
+        });
+    } else {
+        transport = new StreamableHTTPClientTransport(new URL(server.url));
+    }
+
+    const client = new Client(
+        { name: 'gneol-mcp', version: '1.0.0' },
+        { capabilities: {} }
+    );
+
+    await client.connect(transport);
+    const result = await client.listTools();
+    await client.close();
+    // setTimeout(() => {
+    // console.log(JSON.stringify(result, null, 2))
+    // }, 3000)
+
+    return result?.tools ?? [];
+}
+
+function mcpToolToGneolFunction(serverName: string, x: any): object {
+    const input_schema = zodToTs(x.inputSchema);
+    const output_schema = x.outputSchema ? zodToTs(x.outputSchema) : ''
+    return {
+        name: `mcp.${serverName}.${x.name}`,
+        description: x.description,
+        input_schema,
+        output_schema
+    }
+}
+
+export async function syncTools(id: string): Promise<{ functions: object[]; servers: string[] }> {
+    await disconnectAll();
+    const servers = await loadServers();
+    // setTimeout(() => {
+    // pushSystemMessage(JSON.stringify(servers, null, 2))
+    // }, 3000);
+    const enabled = servers.filter(s => s.enabled);
+    const allFunctions: object[] = [];
+    const succeededServers: string[] = [];
+
+    for (const server of enabled) {
+        try {
+            const tools = await fetchToolsFromServer(server);
+            const converted = tools.map(t => mcpToolToGneolFunction(server.name, t));
+            console.log(converted);
+            allFunctions.push(...converted);
+            succeededServers.push(server.name);
+        } catch (err: any) {
+            // setTimeout(() => {
+            console.log(`MCP: Failed to fetch tools from ${server.name}: ${err.message}`);
+            // }, 3000);
+        }
+    }
+
+    const output = {
+        fetchedAt: new Date().toISOString(),
+        servers: succeededServers,
+        functions: allFunctions,
+    };
+    // await fs.mkdir(path.dirname(MCP_TOOLS_PATH), { recursive: true });
+    // await fs.writeFile(MCP_TOOLS_PATH, JSON.stringify(output, null, 2));
+
+
+    // const agent = await prisma.soul.update({
+    //     where: {
+    //         id
+    //     },
+    //     data: {
+    //         mcpTools: allFunctions
+    //     }
+    // });
+
+    // await MessageManager.resolve_system_message(agent);
+    markForRebuild(id, true);
+
+
+    return { functions: allFunctions, servers: succeededServers };
+}
+
+export function initializeMCPClient(): void {
+    syncTools('').then(result => {
+        setTimeout(() => {
+            console.log(`MCP: Synced ${result.functions.length} tool(s) from ${result.servers.length} server(s)`);
+        }, 3000);
+    }).catch(() => { });
+}

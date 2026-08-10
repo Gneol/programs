@@ -20,16 +20,16 @@ const REQUIRED_API_KEY: Provider[] = [
 
 
 export type TaskResponse = {
-    content: string,
-    clean: any,
-    status: 'success' | 'error',
-    error: boolean,
-    usage_metadata: {
-        inputTokens: number,
-        outputTokens: number,
-        totalTokens: number,
-        cachedTokens
-    }
+  content: string,
+  clean: any,
+  status: 'success' | 'error',
+  error: boolean,
+  usage_metadata: {
+    inputTokens: number,
+    outputTokens: number,
+    totalTokens: number,
+    cachedTokens
+  }
 }
 
 export const cacheEngine = new CacheEngine<ModelCacheData>();
@@ -85,8 +85,8 @@ export async function ModelInstance(config: BaseModelConfig): Promise<ModelCache
     },
   });
 
-  rateLimiter.on('completed', async (response)=> await onCompleteInvokation(response));
-  rateLimiter.on('error', async (error)=> await onErrorOnInvokation(error));
+  rateLimiter.on('completed', async (response) => await onCompleteInvokation(response));
+  rateLimiter.on('error', async (error) => await onErrorOnInvokation(error));
 
 
   const invoke = async (soulId: string) => {
@@ -107,7 +107,7 @@ export async function ModelInstance(config: BaseModelConfig): Promise<ModelCache
       max_tokens: config.maxTokens,
       rate_limit: rateLimit,
     },
-    invoke,
+    invoke
   };
 
   await cacheEngine.cache(cacheKey, data, 60 * 60); // 1 hour TTL
@@ -127,7 +127,7 @@ export async function preloadModelsFromBindings(
       console.warn(`Model binding "${binding.tag}" has no provider; skipping.`);
       continue;
     }
-    
+
     // if(cacheEngine.get(binding.tag)){
     //   continue;
     // }
@@ -146,7 +146,7 @@ export async function preloadModelsFromBindings(
       maxTokens: binding.maxTokens ?? 2048,
       apiKey: resolvedKey,
       program: programPath,
-      rateLimit: binding.rateLimit,
+      rateLimit: binding.rateLimit
     };
     try {
       await ModelInstance(config);

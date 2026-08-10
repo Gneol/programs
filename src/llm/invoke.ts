@@ -6,6 +6,7 @@ import { ProgramToolManager } from "../tools/utils/ProgramToolManager";
 import { getGlobalSoulStore, Soul } from "../db/program";
 import { ttc } from "ttc-rpc";
 import { Stream } from "../db/stream";
+import { callTool } from "../mcp";
 
 
 type GneolEvents =
@@ -51,6 +52,14 @@ export class InvokeEngine {
                 call.function?.replace('tool.', '');
                 try {
                     response = await ProgramToolManager.invokeTool(call, conversation_id);
+                } catch (error) {
+                    console.log(error);
+                    response = error.message;
+                }
+            } else if (name.startsWith('mcp.')) {
+                try {
+                    response =  await callTool(conversation_id, call);
+                    console.log(response);
                 } catch (error) {
                     console.log(error);
                     response = error.message;

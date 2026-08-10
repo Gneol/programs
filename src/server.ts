@@ -102,8 +102,8 @@ export class GneolServer {
             case 'mcp': {
                 const mcps: { name: string; config: string; program: string }[] = [];
                 for (const rt of runtimes) {
-                    for (const [name, config] of Object.entries(rt.program.mcpConfigs || {})) {
-                        mcps.push({ name, config, program: rt.program.title });
+                    for (const [name, decl] of Object.entries(rt.program.mcpConfigs || {})) {
+                        mcps.push({ name, config: decl.config, program: rt.program.title });
                     }
                 }
                 const offset = (page - 1) * limit;

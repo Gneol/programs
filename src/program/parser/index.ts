@@ -22,11 +22,17 @@ export { parseTimeExpression, parseEnvFile, mergeImports };
  * Parse .gneol content into a GneolProgram data structure.
  */
 export function parseGneol(content: string, path: string = ''): GneolProgram {
+
+    console.log(path)
+    // 0. Parse model() bindings FIRST so header parsers don't steal .name() from model blocks
+    const { modelBindings, filteredContent: afterModels } = parseModelBindings(content);
+    // console.log(modelBindings, afterModels)
+
     // 1. Parse program title (does not modify content)
-    const { title } = parseTitle(content);
+    const { title } = parseTitle(afterModels);
 
     // 1.5 Parse agent identity: .name(), .traits(), .backstory()
-    const { name, filteredContent: afterName } = parseName(content);
+    const { name, filteredContent: afterName } = parseName(afterModels);
     const { traits, filteredContent: afterTraits } = parseTraits(afterName);
     const { backstory, filteredContent: afterIdentity } = parseBackstory(afterTraits);
 
@@ -60,11 +66,10 @@ export function parseGneol(content: string, path: string = ''): GneolProgram {
     // 8.6 Parse webhook() declarations
     const { webhooks, filteredContent: afterWebhooks } = parseWebhooks(afterTools);
 
-    // 9. Parse model() bindings
-    const { modelBindings, filteredContent: afterModels } = parseModelBindings(afterWebhooks);
+    // 9. (modelBindings already parsed in step 0 — skip)
 
     // 10. Parse at() and on() actions
-    const actions = parseActions(afterModels, path);
+    const actions = parseActions(afterWebhooks, path);
 
     return {
         title,
@@ -78,7 +83,6 @@ export function parseGneol(content: string, path: string = ''): GneolProgram {
         summarizationModel,
         summarizationPrompt,
         agentId,
-        sentinelDeclarations: subagentDeclarations,
         subagentDeclarations: subagentDeclarations,
         wildcardModel,
         modelBindings,
