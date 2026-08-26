@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "zerve": {
+      "url": "https://mcp.dev.zerve.ai/mcp"
+    },
+    "remotion": {
+      "url": "https://mcp.remotion.dev/mcp"
+    }
+  }
+}

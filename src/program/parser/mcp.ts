@@ -32,3 +32,5 @@ export function parseMcp(content: string): {
     filteredContent = filteredContent.replace(/\n{2,}/g, '\n');
     return { mcpConfigs, filteredContent };
 }
+
+

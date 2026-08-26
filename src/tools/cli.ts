@@ -71,7 +71,7 @@ CliModule.tool({
         const store = getGlobalSoulStore();
         const soul = store.get(id);
         const runtime = ProgramRuntime.getRuntime(soul.programPath);
-        const permissionLevel = runtime.program.permission ? await runtime.program.permission['Cli.execute'] : null;
+        const permissionLevel = runtime?.program?.permission ? await runtime.program.permission['Cli.execute'] : null;
         const level: PermissionLevel = permissionLevel || 'dynamic';
         if (level === 'allow') {
             return false;

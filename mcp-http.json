@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "exa": {
+      "url": "https://mcp.exa.ai/mcp"
+    },
+    "godbolt": {
+      "url": "https://mcp.godbolt.org/mcp"
+    }
+  }
+}
+

@@ -21,6 +21,15 @@ export class ProgramRuntime {
 
     private static NeuralCore: Map<string, ProgramRuntime> = new Map();
     static isInitialized: boolean;
+
+    // Placeholder for subscription gating. Set from server.ts (or future subscription service).
+    private static _subscription: boolean = false;
+    static get subscription() {
+        return ProgramRuntime._subscription;
+    }
+    static set subscription(value: boolean) {
+        ProgramRuntime._subscription = value;
+    }
     agentId: string;
     program: GneolProgram;
     mcpTools: f_schema[];
@@ -40,12 +49,13 @@ export class ProgramRuntime {
     }
 
     // ── Static: One-stop deploy :: parse → env → soul → models → runtime ──
-    static async deployProgram(filePath: string, agentId?: string): Promise<{ title: string; soulId: string, name: string }> {
+    static async deployProgram(filePath: string, agentId?: string, skipSubscriptionCheck?: boolean): Promise<{ title: string; soulId: string, name: string }> {
         const resolvedPath = fspath.resolve(filePath);
         if (!fs.existsSync(resolvedPath)) throw new Error(`File not found: ${resolvedPath}`);
 
         // const content = fs.readFileSync(resolvedPath, 'utf-8');
         const program = parseGneolFile(resolvedPath);
+        // console.log(program.mcpConfigs, 'in deploy')
 
         // Resolve env files for this program — uses the same static method
         const envStore = ProgramRuntime.resolveEnv(program);
@@ -65,6 +75,21 @@ export class ProgramRuntime {
                 console.warn(`Model preload warning for "${program.title}": ${err.message}`);
             }
             return { title: program.title, soulId: '', name: '' };
+        }
+
+        // ── Subscription gate: only one program may be active without a subscription ──
+        // If we already have at least one runtime and this is a different program,
+        // block the deploy unless subscription is active (or this is an init restore).
+        if (!skipSubscriptionCheck && !ProgramRuntime.subscription && ProgramRuntime.NeuralCore.size > 0) {
+            for (const existingPath of ProgramRuntime.NeuralCore.keys()) {
+                if (existingPath !== resolvedPath) {
+                    throw new Error(
+                        `You can only run one program at a time on the free plan. ` +
+                        `Program "${existingPath}" is already active. ` +
+                        `Upgrade to Premium to run multiple programs simultaneously.`
+                    );
+                }
+            }
         }
 
         // Reuse existing runtime or create a new one (keyed by resolved path)
@@ -146,6 +171,7 @@ export class ProgramRuntime {
     }
 
     handleMcpConfigs = async (program: GneolProgram) => {
+        console.log(program.mcpConfigs, 'check..', program.path)
         // console.log('handling mcp scripts...', program.mcpConfigs)
         if (!program.mcpConfigs || Object.keys(program.mcpConfigs).length === 0)
             return;
@@ -162,6 +188,7 @@ export class ProgramRuntime {
                 console.error(error.message);
             }
         }
+        console.log(this.mcpTools)
     }
 
     eventBucketCallback = async (action, message) => {
@@ -320,11 +347,13 @@ export class ProgramRuntime {
             return;
         }
         try {
-            const result = await ProgramRuntime.deployProgram(soul.programPath, soul.id);
+            const result = await ProgramRuntime.deployProgram(soul.programPath, soul.id, true); // skip subscription gate on init restore
             const runtime = ProgramRuntime.NeuralCore.get(fspath.resolve(soul.programPath));
-            if (runtime) runtime.agentId = soul.id;
-            await runtime.handleToolDefinitions(runtime.program);
-            await runtime.handleMcpConfigs(runtime.program);
+            if (runtime) {
+                runtime.agentId = soul.id;
+                await runtime.handleToolDefinitions(runtime.program);
+                console.log(runtime.program.mcpConfigs, 'programs');
+            }
             // console.log(`Loaded soul "${soul.id}" → program "${result.title}"`);
         } catch (err: any) {
             console.warn(`Failed to load soul "${soul.id}": ${err.message}`);

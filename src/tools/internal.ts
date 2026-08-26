@@ -64,6 +64,7 @@ Internal.tool({
             const runtime = ProgramRuntime.getRuntimeByTitle(result.title);
             if (runtime) {
                 await runtime.handleToolDefinitions(runtime.program);
+                await runtime.handleMcpConfigs(runtime.program);
             }
             markForRebuild(result.soulId, true);
             return result;
@@ -245,10 +246,10 @@ Internal.tool({
     name: 'keepQuiet',
     description: 'call this function is you have nothing to say and you can also call this to truly tell the user you are done to avoid the event triggers trying to ensure you are doing and have not broken chain of execution',
     parameters: z.object(),
-    async action(input, id) {
-        const soul = store.get(id);
-        return `${soul.name} is keeping quiet`
-    },
+    // async action(input, id) {
+    //     const soul = store.get(id);
+    //     return `${soul.name} is keeping quiet`
+    // },
     func: async (input: {}, id: string) => {
         // console.log('Radio silence')
         Stream.setState(id, 'dormant');
@@ -362,6 +363,7 @@ Internal.tool({
             const runtime = ProgramRuntime.getRuntimeByTitle(result.title);
             if (runtime) {
                 await runtime.handleToolDefinitions(runtime.program);
+                await runtime.handleMcpConfigs(runtime.program);
             }
             markForRebuild(result.soulId, true);
             return `Program deployed successfully.\n${JSON.stringify(result, null, 2)}`;

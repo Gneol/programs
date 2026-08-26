@@ -13,6 +13,14 @@ import { markForRebuild } from "./llm/system_message.js";
 import { storeToken, getToken, removeToken, listTokens } from "./tokenStore.js";
 
 
+// ── Subscription placeholder ──
+// Static constant representing whether the current deployment has an active
+// subscription. When false, only one .gneol program may run at a time.
+// Future: replace with a utility function (e.g., checkSubscription()).
+const SUB = false;
+ProgramRuntime.subscription = SUB;
+
+
 export class GneolServer {
 
 
@@ -343,6 +351,7 @@ export class GneolServer {
         const runtime = ProgramRuntime.getRuntimeByTitle(result.title);
         if (runtime) {
             await runtime.handleToolDefinitions(runtime.program);
+            await runtime.handleMcpConfigs(runtime.program);
         }
         markForRebuild(result.soulId, true);
         return result;
