@@ -17,7 +17,7 @@ import { storeToken, getToken, removeToken, listTokens } from "./tokenStore.js";
 // Static constant representing whether the current deployment has an active
 // subscription. When false, only one .gneol program may run at a time.
 // Future: replace with a utility function (e.g., checkSubscription()).
-const SUB = false;
+const SUB = true;
 ProgramRuntime.subscription = SUB;
 
 
