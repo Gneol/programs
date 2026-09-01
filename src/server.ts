@@ -10,6 +10,7 @@ import { invokationEngine } from "./llm/invoke.js";
 import { Stream } from "./db/stream.js";
 import { llm_message_internal } from "./llm/utils/types.js";
 import { markForRebuild } from "./llm/system_message.js";
+import { ProgramWatcher } from "./program/watcher.js";
 import { storeToken, getToken, removeToken, listTokens } from "./tokenStore.js";
 import fs from 'fs';
 import os from 'os';
@@ -348,11 +349,12 @@ export class GneolServer {
     @ttc.describe({
         doc: 'deploy a .gneol program file',
         parameterSchema: z.object({
-            programPath: z.string()
+            programPath: z.string(),
+            watch: z.boolean().optional()
         }),
-        param_index: 1
+        param_index: 2
     })
-    async deploy(programPath: string) {
+    async deploy(programPath: string, watch?: boolean) {
 
         const result = await ProgramRuntime.deployProgram(programPath);
         const runtime = ProgramRuntime.getRuntimeByTitle(result.title);
@@ -361,6 +363,21 @@ export class GneolServer {
             await runtime.handleMcpConfigs(runtime.program);
         }
         markForRebuild(result.soulId, true);
+        if (watch) {
+            ProgramWatcher.getOrCreate(programPath, async () => {
+                try {
+                    const res = await ProgramRuntime.deployProgram(programPath);
+                    const rt = ProgramRuntime.getRuntimeByTitle(res.title);
+                    if (rt) {
+                        await rt.handleToolDefinitions(rt.program);
+                        await rt.handleMcpConfigs(rt.program);
+                    }
+                    markForRebuild(res.soulId, true);
+                } catch (err: any) {
+                    console.error(`[watch:${programPath}] Redeploy failed: ${err.message}`);
+                }
+            });
+        }
         return result;
     }
 

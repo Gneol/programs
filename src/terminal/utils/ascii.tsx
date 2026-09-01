@@ -10,6 +10,7 @@ interface ASCIIHeaderProps {
 }
 
 export const ASCIIHeader: React.FC<ASCIIHeaderProps> = React.memo(({ assistantName, model }) => {
+
   return (
     <Box flexDirection="column" marginTop={1} marginBottom={1}>
       <Box borderStyle="single" borderColor="cyan" paddingX={1}>
@@ -19,7 +20,7 @@ export const ASCIIHeader: React.FC<ASCIIHeaderProps> = React.memo(({ assistantNa
             <Text bold color="cyan">Gneol</Text>
             <Text dimColor>  └── https://gneol.github.com</Text>
             <Text> </Text>
-            <Text color="gray">Agent - <Text bold color="cyan">{assistantName || '...'}</Text></Text>
+            <Text color="gray">Agent - <Text bold color="cyan">{assistantName}</Text></Text>
             <Text color="gray">Model - <Text bold color="cyan">{model || '...'}</Text></Text>
             <Text dimColor>Use <Text color="yellow">/help</Text> to see available commands..</Text>
             {/* {!licenseState.valid && (

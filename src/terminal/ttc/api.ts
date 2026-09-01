@@ -29,7 +29,6 @@ export class Assistant {
         try {
             this.assistantId = assistantId;
             this.server = new Server(`http://localhost:${getServerPort()}`);
-            this.name = assistantId;
             this.program = new Program(programPath);
         } catch (error) {
             console.log(error);

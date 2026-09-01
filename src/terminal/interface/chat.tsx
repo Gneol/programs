@@ -619,6 +619,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ assistant }) => {
     };
   }, []);
 
+
   return (
     <Box flexDirection="column">
       {/* HEADER */}
@@ -729,12 +730,11 @@ export async function startChat(agent: string, name: string, path: string) {
   // console.log(agent, path, name)
   try {
     const current = new Assistant(agent, path);
-    
     await current.stats(name);
+    current.name = name;
     await current.init();
-    // console.log(current)
     setCurrent(current);
-
+    // console.log(current.name)
     await initCommands();
   
     const app = withFullScreen(

@@ -398,11 +398,11 @@ export class RPCClient {
         /**
          * deploy a .gneol program file
          *
-         * @param {programPath: string}
+         * @param {programPath: string, watch: boolean}
          * @returns {Promise<rpcResponseType<any>>}
          */
-        async deploy(programPath: string): Promise<rpcResponseType<any>> {
-            return await RPCClient.apiCallback('GneolServer.deploy', [programPath]);
+        async deploy(programPath: string, watch?: boolean): Promise<rpcResponseType<any>> {
+            return await RPCClient.apiCallback('GneolServer.deploy', watch ? [programPath, watch] : [programPath]);
         },
         /**
          * approve permission

@@ -25,12 +25,12 @@ export async function resourceAction(
 
 
 /** Deploy a .gneol program to the server */
-export async function deploy(filePath: string): Promise<{ soulId: string; programPath: string, name: string }> {
+export async function deploy(filePath: string, watch?: boolean): Promise<{ soulId: string; programPath: string, name: string }> {
   const resolvedPath = path.resolve(filePath);
   if (!fs.existsSync(resolvedPath)) {
     throw new Error(`File not found: ${resolvedPath}`);
   }
-  const res = await api.GneolServer.deploy(resolvedPath);
+  const res = await api.GneolServer.deploy(resolvedPath, watch)
   if (res.status === 'error') {
     throw new Error(res.data || 'Deploy failed');
   }

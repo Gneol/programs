@@ -41,7 +41,7 @@ async function ensureServerRunning(): Promise<number> {
   const port = readPortConfig();
   if (await isPortOpen(port)) return port;
   console.log(`Server not running on port ${port}. Starting...`);
-  execDetached(`gneol-cli start -p ${port}`);
+  execDetached(`gneol start -p ${port}`);
   for (let i = 0; i < 10; i++) {
     await new Promise(res => setTimeout(res, 500));
     if (await isPortOpen(port)) return port;
@@ -150,9 +150,11 @@ program
   .description('Reconcile server state with a .gneol script')
   .requiredOption('-f, --file <path>', 'Path to the .gneol script file')
   .option('-i, --interactive', 'Start an interactive chat session after deploying')
+  .option('-w, --watch', 'Watch the file and auto-redeploy on changes')
   .action(async (options) => {
+    await ensureServerRunning()
     const resolvedPath = path.resolve(options.file);
-    const response = await deploy(resolvedPath);
+    const response = await deploy(resolvedPath, options.watch);
     console.log(JSON.stringify(response, null, 2))
     if (options.interactive) {
       await startChat(response.soulId, response.name, response.programPath);
@@ -219,7 +221,7 @@ program
       await ensureServerRunning();
       const { soulId, programPath, name } = await initializeSession({ id: opts.id, agent: opts.agent });
       // program should be deployed
-      console.log(soulId, programPath, name);
+      // console.log(soulId, programPath, name, 'CHECK CHECK');
       await startChat(soulId, name, programPath);
     } catch (err: any) {
       console.error(err.message);
@@ -237,7 +239,7 @@ program
   .action(async (opts: { daemonize?: boolean; port?: number }) => {
     if (opts.daemonize) {
       // Re-invoke without --daemonize in detached mode
-      const cmd = `gneol-cli start ${opts.port ? '-p ' + opts.port : ''}`;
+      const cmd = `gneol start ${opts.port ? '-p ' + opts.port : ''}`;
       execDetached(cmd);
       console.log('Server started in background.');
       process.exit(0);
@@ -272,21 +274,21 @@ program
           break;
         }
         case 'get': {
-          if (!key) { console.error('Usage: gneol-cli secrets get <key>'); process.exit(1); }
+          if (!key) { console.error('Usage: gneol secrets get <key>'); process.exit(1); }
           const res = await api.GneolServer.getSecret(key);
           if (res.status === 'error') throw new Error(res.data);
           console.log(`Secret "${key}" found.`);
           break;
         }
         case 'set': {
-          if (!key || !value) { console.error('Usage: gneol-cli secrets set <key> <value>'); process.exit(1); }
+          if (!key || !value) { console.error('Usage: gneol secrets set <key> <value>'); process.exit(1); }
           const res = await api.GneolServer.storeSecret(key, value);
           if (res.status === 'error') throw new Error(res.data);
           console.log(`Secret "${key}" stored.`);
           break;
         }
         case 'delete': {
-          if (!key) { console.error('Usage: gneol-cli secrets delete <key>'); process.exit(1); }
+          if (!key) { console.error('Usage: gneol secrets delete <key>'); process.exit(1); }
           const res = await api.GneolServer.removeSecret(key);
           if (res.status === 'error') throw new Error(res.data);
           console.log(`Secret "${key}" deleted.`);
@@ -325,7 +327,7 @@ if (require.main === module) {
   // If no command given, default to 'init'
   // const args = process.argv.slice(2);
   // if (args.length === 0 || args[0].startsWith('-')) {
-    // program.parse(['node', 'gneol-cli', 'init', ...args]);
+    // program.parse(['node', 'gneol', 'init', ...args]);
   // } else {
     program.parse(process.argv);
   // }

@@ -77,21 +77,21 @@ export class ProgramRuntime {
             return { title: program.title, soulId: '', name: '' };
         }
 
-        console.log(ProgramRuntime.NeuralCore.size)
-        // ── Subscription gate: only one program may be active without a subscription ──
-        // If we already have at least one runtime and this is a different program,
-        // block the deploy unless subscription is active (or this is an init restore).
-        if (!skipSubscriptionCheck && !ProgramRuntime.subscription && ProgramRuntime.NeuralCore.size > 3) {
-            for (const existingPath of ProgramRuntime.NeuralCore.keys()) {
-                if (existingPath !== resolvedPath) {
-                    throw new Error(
-                        `You can only run one program at a time on the free plan. ` +
-                        `Program "${existingPath}" is already active. ` +
-                        `Upgrade to Premium to run multiple programs simultaneously.`
-                    );
-                }
-            }
-        }
+        // console.log(ProgramRuntime.NeuralCore.size)
+        // // ── Subscription gate: only one program may be active without a subscription ──
+        // // If we already have at least one runtime and this is a different program,
+        // // block the deploy unless subscription is active (or this is an init restore).
+        // if (!skipSubscriptionCheck && !ProgramRuntime.subscription && ProgramRuntime.NeuralCore.size > 3) {
+        //     for (const existingPath of ProgramRuntime.NeuralCore.keys()) {
+        //         if (existingPath !== resolvedPath) {
+        //             throw new Error(
+        //                 `You can only run one program at a time on the free plan. ` +
+        //                 `Program "${existingPath}" is already active. ` +
+        //                 `Upgrade to Premium to run multiple programs simultaneously.`
+        //             );
+        //         }
+        //     }
+        // }
 
         // Reuse existing runtime or create a new one (keyed by resolved path)
         let runtime = ProgramRuntime.NeuralCore.get(resolvedPath);
