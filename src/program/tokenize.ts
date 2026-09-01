@@ -72,11 +72,11 @@ export function tokenizeFile(filePath: string): IState {
     });
   }
 
-  // 3. Sentinel directives
-  if (program.sentinelDeclarations) {
-    program.sentinelDeclarations.forEach((sd, i) => {
-      const id = makeId('sentinel', i);
-      push(id, 'sentinel', {
+  // 3. Subagent directives
+  if (program.subagentDeclarations) {
+    program.subagentDeclarations.forEach((sd, i) => {
+      const id = makeId('subagent', i);
+      push(id, 'subagent', {
         name: sd.name,
         model: sd.model,
         id: sd.id,
@@ -127,7 +127,7 @@ export function tokenizeFile(filePath: string): IState {
         }
         if (a.resources && a.resources.length > 0) data.resource = a.resources[0];
         if (a.maxTrigger !== undefined) data.max = a.maxTrigger;
-        if (a.subagent) data.sentinel = a.subagent;
+        if (a.subagent) data.subagent = a.subagent;
         if (a.modify) data.modify = true;
         push(id, 'at', data);
       } else if (a.type === 'event') {
@@ -143,7 +143,7 @@ export function tokenizeFile(filePath: string): IState {
           if (a.eventOptions.delay !== undefined) data.delay = a.eventOptions.delay;
         }
         if (a.maxTrigger !== undefined) data.max = a.maxTrigger;
-        if (a.subagent) data.sentinel = a.subagent;
+        if (a.subagent) data.subagent = a.subagent;
         if (a.modify) data.modify = true;
         push(id, 'on', data);
       }
@@ -215,8 +215,8 @@ export function stateToGneol(state: IState): string {
         lines.push(line, '');
         break;
       }
-      case 'sentinel': {
-        let line = `sentinel("${(data.name || '').replace(/"/g, '\\"')}")`;
+      case 'subagent': {
+        let line = `subagent("${(data.name || '').replace(/"/g, '\\"')}")`;
         if (data.model) line += `\n    .model("${data.model}")`;
         if (data.id) line += `\n    .id("${data.id}")`;
         if (data.description) line += `\n    .description("${data.description.replace(/"/g, '\\"')}")`;
@@ -263,7 +263,7 @@ export function stateToGneol(state: IState): string {
         if (data.max !== undefined) line += `\n    .max(${data.max})`;
         if (data.maxSize !== undefined) line += `\n    .maxSize(${data.maxSize})`;
         if (data.delay !== undefined) line += `\n    .delay(${data.delay})`;
-        if (data.sentinel) line += `\n    .sentinel("${data.sentinel}")`;
+        if (data.subagent) line += `\n    .subagent("${data.subagent}")`;
         if (data.modify) line += `\n    .modify()`;
         lines.push(line, '');
         break;
@@ -280,7 +280,7 @@ export function stateToGneol(state: IState): string {
         if (data.maxSize !== undefined) line += `\n    .maxSize(${data.maxSize})`;
         if (data.delay !== undefined) line += `\n    .delay(${data.delay})`;
         if (data.max !== undefined) line += `\n    .max(${data.max})`;
-        if (data.sentinel) line += `\n    .sentinel("${data.sentinel}")`;
+        if (data.subagent) line += `\n    .subagent("${data.subagent}")`;
         if (data.modify) line += `\n    .modify()`;
         lines.push(line, '');
         break;

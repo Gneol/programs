@@ -74,7 +74,7 @@ const randomThinkingText = (state: 'active' | 'inactive'): string => {
 const repair_argument_nomal = (chat: Soul, calls: f_call[]) => {
     return calls.map(call => {
         if (call.function === 'TTCInternal.speakToUser') {
-            if (chat.id.includes('sentinel')) {
+            if (chat.id.includes('sentinel') || chat.id.includes('subagent')) {
                 call.function = 'TTCInternal.speakToAssistant'
                 call.arguments.assistant_conversation_id = chat.parentId
             }
@@ -118,6 +118,7 @@ export async function invokeModel(llm: LLMModel, soulId: string): Promise<TaskRe
         ];
 
         // console.log(systemPrompt)
+        // console.log(messages)
 
         if (summary) {
             messages.push(summary);

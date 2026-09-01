@@ -1,4 +1,5 @@
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import { Command } from 'commander';
 import { getTemplate, resources } from './program/template.js';
@@ -7,11 +8,52 @@ import { startServer } from './server.js';
 import { execDetached } from './tools/utils/cliInvoke.js';
 import { execSync } from 'child_process';
 import { startChat } from './terminal/interface/chat.js';
+import { initializeSession } from './cli-utils/init.js';
+import net from 'net';
+
+function readPortConfig(): number {
+  try {
+    const configPath = path.join(os.homedir(), '.gneol', 'port.config');
+    const port = parseInt(fs.readFileSync(configPath, 'utf8').trim(), 10);
+    if (!isNaN(port)) return port;
+  } catch {}
+  return 3999;
+}
+
+function isPortOpen(port: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const socket = net.connect(port, '127.0.0.1');
+    const onError = () => { socket.destroy(); resolve(false); };
+    const onTimeout = () => { socket.destroy(); resolve(false); };
+    socket.setTimeout(1000);
+    socket.once('error', onError);
+    socket.once('timeout', onTimeout);
+    socket.once('connect', () => {
+      socket.removeListener('error', onError);
+      socket.removeListener('timeout', onTimeout);
+      socket.destroy();
+      resolve(true);
+    });
+  });
+}
+
+async function ensureServerRunning(): Promise<number> {
+  const port = readPortConfig();
+  if (await isPortOpen(port)) return port;
+  console.log(`Server not running on port ${port}. Starting...`);
+  execDetached(`gneol-cli start -p ${port}`);
+  for (let i = 0; i < 10; i++) {
+    await new Promise(res => setTimeout(res, 500));
+    if (await isPortOpen(port)) return port;
+  }
+  throw new Error(`Server failed to start on port ${port}.`);
+}
+
 
 const program = new Command();
 
 program
-  .name('gneol-cli')
+  .name('gneol')
   .description('Gneol CLI – manage AI platform resources via .gneol scripts')
   .version('1.0.0');
 
@@ -46,7 +88,7 @@ for (const resource of resources) {
 
   resourceCmd
     .command('list')
-    .option('-i, --id <id>', `Optional ${resource} ID to filter`)
+    .option('--id <id>', `Optional ${resource} ID to filter`)
     .option('-p, --page <page>', 'Page number (1-indexed)', parseInt)
     .option('-l, --limit <limit>', 'Results per page', parseInt)
     .description(`List all ${resource}s currently active on the server`)
@@ -68,7 +110,7 @@ for (const resource of resources) {
     .command('prune')
     .description(`Remove stale/unreferenced ${resource}s`)
     .option('-y, --yes', 'Skip confirmation')
-    .option('-i, --id <id>', `Optional ${resource} ID to filter`)
+    .option('--id <id>', `Optional ${resource} ID to filter`)
     .action(async (opts: { yes?: boolean; id?: string }) => {
       try {
         await resourceAction('prune', resource, {
@@ -107,11 +149,16 @@ program
   .command('deploy')
   .description('Reconcile server state with a .gneol script')
   .requiredOption('-f, --file <path>', 'Path to the .gneol script file')
+  .option('-i, --interactive', 'Start an interactive chat session after deploying')
   .action(async (options) => {
     const resolvedPath = path.resolve(options.file);
     const response = await deploy(resolvedPath);
     console.log(JSON.stringify(response, null, 2))
-    process.exit(0)
+    if (options.interactive) {
+      await startChat(response.soulId, response.name, response.programPath);
+    } else {
+      process.exit(0)
+    }
   });
 
 // ─── Rollback ───
@@ -145,17 +192,31 @@ program
     }
   });
 
-// ─── Init (default) ───
+// ─── Status ───
 
-import { initializeSession } from './cli-utils/init.js';
+program
+  .command('status')
+  .description('Check whether the Gneol server is running')
+  .action(async () => {
+    const port = readPortConfig();
+    if (await isPortOpen(port)) {
+      console.log(`Gneol server is running on port ${port}`);
+    } else {
+      console.log(`Gneol server is down`);
+    }
+    process.exit(0);
+  });
+
+// ─── Init (default) ───
 
 program
   // .command('cli')
   .description('Initialize a Gneol session in the current directory')
-  .option('-i, --id <id>', 'The agent id')
+  .option('--id <id>', 'The agent id')
   .option('-a, --agent', 'List and select an existing agent')
   .action(async (opts: any) => {
     try {
+      await ensureServerRunning();
       const { soulId, programPath, name } = await initializeSession({ id: opts.id, agent: opts.agent });
       // program should be deployed
       console.log(soulId, programPath, name);

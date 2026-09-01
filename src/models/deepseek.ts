@@ -65,7 +65,7 @@ type DSModel = 'deepseek-chat' | 'deepseek-reasoner' | 'deepseek-v4-flash' | 'de
 // const deepseekAPIKey = process.env.DEEPSEEK_API_KEY || '';
 // const grok = new Deepseek({
 //   apiKey: deepseekAPIKey,
-//   model: 'deepseek-chat',
+//   model: 'deepseek-v4-flash',
 //   temperature: 0.7,
 //   maxTokens: 4000
 // });

@@ -347,28 +347,57 @@ Internal.tool({
     }
 });
 
+
 Internal.tool({
-    name: 'deployProgram',
-    description: 'Deploy a .gneol program file directly without CLI.',
+    name: 'listPeers',
+    description: 'Show other agents working on the system, this functions list primary agents, not sub agents',
     parameters: z.object({
-        filePath: z.string().describe('Path to the .gneol program file to deploy')
+        page: z.number(),
+        limit: z.number()
     }),
-    async action(input, id) {
+    action: async (input, id) => {
         const soul = store.get(id);
-        return `${soul.name} is deploying program at "${input.filePath}"`;
+        return `${soul.name} is scanning environment for other agents`;
     },
-    async func({ filePath }, id: string) {
-        try {
-            const result = await ProgramRuntime.deployProgram(filePath);
-            const runtime = ProgramRuntime.getRuntimeByTitle(result.title);
-            if (runtime) {
-                await runtime.handleToolDefinitions(runtime.program);
-                await runtime.handleMcpConfigs(runtime.program);
-            }
-            markForRebuild(result.soulId, true);
-            return `Program deployed successfully.\n${JSON.stringify(result, null, 2)}`;
-        } catch (error: any) {
-            return `Deploy failed: ${error.message || 'Unknown error'}`;
-        }
+    async func(input: { page: number, limit: number }, id: string) {
+        let { page, limit } = input;
+        const store = getGlobalSoulStore();
+        const allSouls = store.list();
+        const souls = allSouls
+            .filter(s => !s.parentId)
+            .map(s => ({
+                id: s.id,
+                name: s.name,
+                program: s.program,
+                programPath: s.programPath
+            }));
+        const offset = (page - 1) * limit;
+        return souls.slice(offset, offset + limit);
     }
-});
+})
+
+// Internal.tool({
+//     name: 'deployProgram',
+//     description: 'Deploy a .gneol program file directly without CLI.',
+//     parameters: z.object({
+//         filePath: z.string().describe('Path to the .gneol program file to deploy')
+//     }),
+//     async action(input, id) {
+//         const soul = store.get(id);
+//         return `${soul.name} is deploying program at "${input.filePath}"`;
+//     },
+//     async func({ filePath }, id: string) {
+//         try {
+//             const result = await ProgramRuntime.deployProgram(filePath);
+//             const runtime = ProgramRuntime.getRuntimeByTitle(result.title);
+//             if (runtime) {
+//                 await runtime.handleToolDefinitions(runtime.program);
+//                 await runtime.handleMcpConfigs(runtime.program);
+//             }
+//             markForRebuild(result.soulId, true);
+//             return `Program deployed successfully.\n${JSON.stringify(result, null, 2)}`;
+//         } catch (error: any) {
+//             return `Deploy failed: ${error.message || 'Unknown error'}`;
+//         }
+//     }
+// });

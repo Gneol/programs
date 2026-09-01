@@ -11,19 +11,20 @@ import { Stream } from "./db/stream.js";
 import { llm_message_internal } from "./llm/utils/types.js";
 import { markForRebuild } from "./llm/system_message.js";
 import { storeToken, getToken, removeToken, listTokens } from "./tokenStore.js";
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
 
 
 // ── Subscription placeholder ──
 // Static constant representing whether the current deployment has an active
 // subscription. When false, only one .gneol program may run at a time.
 // Future: replace with a utility function (e.g., checkSubscription()).
-const SUB = true;
+const SUB = false;
 ProgramRuntime.subscription = SUB;
 
 
 export class GneolServer {
-
-
 
     static getProgram(programName: string) {
         const runtime = ProgramRuntime.getRuntimeByTitle(programName);
@@ -45,7 +46,8 @@ export class GneolServer {
             page: z.number(),
             limit: z.number(),
             id: z.string().optional()
-        })
+        }),
+        param_index: 4
     })
     list(resource: string, page: number, limit: number, id?: string) {
         const allRuntimes = ProgramRuntime.getAllRuntimes();
@@ -267,7 +269,8 @@ export class GneolServer {
         parameterSchema: z.object({
             id: z.string(),
             message: z.string()
-        })
+        }),
+        param_index: 2,
     })
     async trigger(id: string, message: string) {
         const ctx = ttc.requestContext(arguments);
@@ -297,6 +300,7 @@ export class GneolServer {
 
     @ttc.describe({
         doc: 'store a secret (API key or token)',
+        param_index: 2,
         parameterSchema: z.object({
             key: z.string(),
             value: z.string()
@@ -311,7 +315,8 @@ export class GneolServer {
         doc: 'retrieve a secret (returns masked confirmation, not the actual value)',
         parameterSchema: z.object({
             key: z.string()
-        })
+        }),
+        param_index: 1,
     })
     getSecret(key: string) {
         const val = getToken(key);
@@ -321,6 +326,7 @@ export class GneolServer {
 
     @ttc.describe({
         doc: 'remove a secret',
+        param_index: 1,
         parameterSchema: z.object({
             key: z.string()
         })
@@ -343,7 +349,8 @@ export class GneolServer {
         doc: 'deploy a .gneol program file',
         parameterSchema: z.object({
             programPath: z.string()
-        })
+        }),
+        param_index: 1
     })
     async deploy(programPath: string) {
 
@@ -381,6 +388,7 @@ export class GneolServer {
 
     @ttc.describe({
         doc: 'chat an agent',
+        param_index: 2,
         parameterSchema: z.object({
             id: z.string(),
             message: z.string()
@@ -406,8 +414,16 @@ export class GneolServer {
         // Invoke the model via the rate-limited invoke method (passes soulId)
         await modelData.invoke(soul.id);
 
+        console.log('Invoked oh')
+
         return 'chat sent'
     }
+}
+
+export const portResolution = (port: number) => {
+    const dir = path.join(os.homedir(), '.gneol');
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'port.config'), String(port), 'utf8');
 }
 
 export function startServer(options?: { port?: number; daemonize?: boolean }) {
@@ -418,7 +434,11 @@ export function startServer(options?: { port?: number; daemonize?: boolean }) {
         Stream.publish_event('action_log', arg.id, arg.action);
     })
 
+    const port = options?.port || 3999;
+    portResolution(port);
+
     const app = express();
+    app.get('/health', (_req, res) => res.json({ status: 'ok' }));
     ttc.init({
         app,
         modules: [GneolServer],
@@ -426,10 +446,10 @@ export function startServer(options?: { port?: number; daemonize?: boolean }) {
         async socketCb(socket) {
             console.log(`${socket.id} connected...`)
         },
-    }).listen(options?.port || 3999);
+    }).listen(port);
     if (options?.daemonize) {
-        console.log('Server started on port ' + (options?.port || 3999));
+        console.log('Server started on port ' + (port));
     } else {
-        console.log('Server listening on port ' + (options?.port || 3999));
+        console.log('Server listening on port ' + (port));
     }
 }

@@ -3,6 +3,17 @@ import path from 'path';
 import os from 'os';
 import net from 'net';
 import { GneolEventEmitter } from 'gneol-sdk/dist/server/event';
+import fs from 'fs';
+
+export function getServerPort(): number {
+    const configPath = path.join(os.homedir(), '.gneol', 'port.config');
+    try {
+        const port = parseInt(fs.readFileSync(configPath, 'utf8').trim(), 10);
+        if (!isNaN(port)) return port;
+    } catch { /* fall through */ }
+    return 3999;
+}
+
 import { pushSystemMessage } from '../interface/chat';
 
 
@@ -17,7 +28,7 @@ export class Assistant {
     constructor(assistantId: string, programPath: string) {
         try {
             this.assistantId = assistantId;
-            this.server = new Server('http://localhost:3999');
+            this.server = new Server(`http://localhost:${getServerPort()}`);
             this.name = assistantId;
             this.program = new Program(programPath);
         } catch (error) {
