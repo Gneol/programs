@@ -44,7 +44,7 @@ export class InvokeEngine {
             Stream.setState(conversation_id, 'invoking');
         }
 
-        console.log(`Calling  functions....`)
+        // console.log(`Calling  functions....`)
         for (const call of calls) {
             const name = call.function;
             let response;
@@ -53,15 +53,15 @@ export class InvokeEngine {
                 try {
                     response = await ProgramToolManager.invokeTool(call, conversation_id);
                 } catch (error) {
-                    console.log(error);
+                    // console.log(error);
                     response = error.message;
                 }
             } else if (name.startsWith('mcp.')) {
                 try {
                     response =  await callTool(conversation_id, call);
-                    console.log(response);
+                    // console.log(response);
                 } catch (error) {
-                    console.log(error);
+                    // console.log(error);
                     response = error.message;
                 }
             } else {
@@ -73,7 +73,7 @@ export class InvokeEngine {
                         response = '...'
                     }
                 } catch (error) {
-                    console.log(error);
+                    // console.log(error);
                     response = error.message;
                 }
             }
@@ -104,7 +104,7 @@ export class InvokeEngine {
         }
 
         // console.log(responses)
-        console.log(`Done calling  functions....`)
+        // console.log(`Done calling  functions....`)
 
         return responses;
     }

@@ -74,7 +74,7 @@ export const stripFunctionCalls = async (data: {
         // const id = data.assistant_id;
         let messages = data.messages;
         const stop_index: number = getStopIndex(messages);
-        console.log('stripping', messages.length, 'messages');
+        // console.log('stripping', messages.length, 'messages');
         let totalMessages = messages.length;
         if (stop_index === 0) {
             return;
@@ -114,12 +114,12 @@ export const stripFunctionCalls = async (data: {
         //     type: 'action_log',
         //     state: `stripped, ${totalMessages - messages.length} messages`
         // })
-        console.log(`stripped, ${totalMessages - messages.length} messages`, 'remaining', messages.length)
+        // console.log(`stripped, ${totalMessages - messages.length} messages`, 'remaining', messages.length)
 
         return messages;
 
     } catch (error) {
-        console.log(error);
+        console.log(error.message);
     }
 }
 

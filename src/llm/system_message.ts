@@ -141,7 +141,7 @@ ${runtime && runtimeContexts && runtimeContexts.length > 0 ? runtimeContexts.map
         ${ctx.content.replace(/\n/g, '\n        ')}`).join('\n') : '    No program contexts defined.'}
 `;
 
-    require('fs').writeFileSync('./msg_sys.txt', basePrompt);
+    // require('fs').writeFileSync('./msg_sys.txt', basePrompt);
     systemMessageCache.set(id, basePrompt);
     rebuildFlags.delete(id);
     return basePrompt;

@@ -25,7 +25,7 @@ export class gneolJSONCleaner {
     async interceptedStrangeYaml(_input: string) {
         let input = _input.trim();
         if (input.includes('<｜｜DSML｜｜')) {
-            console.log(input)
+            // console.log(input)
             return true;
         }
 
@@ -84,7 +84,7 @@ export class gneolJSONCleaner {
                 }
             }
         }).filter(x => x !== undefined);
-        console.log(jsonArray, textArray)
+        // console.log(jsonArray, textArray)
 
         return textArray.length > 0 ? jsonArray.concat({
             function: 'Internal.speakToUser',
@@ -154,7 +154,7 @@ export class gneolJSONCleaner {
                 // if (newLineResults) {
                 //     return newLineResults
                 // }
-                console.log(error, 'Error message')
+                // console.log(error, 'Error message')
                 if (await this.checkForTextOnlyOutput(output)) {
                     return [{
                         function: 'Internal.speakToUser',
@@ -278,7 +278,7 @@ export class gneolJSONCleaner {
                 const parsedJSON = JSON.parse(jsonString);
                 //.. find out if it's an array
                 if (Array.isArray(parsedJSON)) {
-                    console.log("it's array");
+                    // console.log("it's array");
                     results = [...results, ...parsedJSON];
                 } else {
                     results.push(parsedJSON);
@@ -300,7 +300,7 @@ export class gneolJSONCleaner {
             return JSON.parse(fixed);
         } catch (fixedError: any) {
             if (llm_instance) {
-                console.log("Attempting LLM-assisted JSON repair...");
+                // console.log("Attempting LLM-assisted JSON repair...");
                 return this.llmAssistedRepair(output, fixedError, llm_instance, depth);
             }
             throw new Error(
@@ -330,10 +330,10 @@ Rules:
         ]);
 
         try {
-            console.log(result.content, 'JSON ERROR FIXED FOR MALFORM OUTPUT');
+            // console.log(result.content, 'JSON ERROR FIXED FOR MALFORM OUTPUT');
             return result.content;
         } catch (error) {
-            console.log('ERROR IN FIX JSON ERRORS', error);
+            // console.log('ERROR IN FIX JSON ERRORS', error);
             throw error;
         }
     }

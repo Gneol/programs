@@ -139,7 +139,7 @@ export async function invokeModel(llm: LLMModel, soulId: string): Promise<TaskRe
         Stream.setState(soul.id, 'processing');
         const response = await llm.invoke(messages as any);
 
-        console.log(response.content, "RAW");
+        // console.log(response.content, "RAW");
 
         let cleaned = await jsonCleaner.clean(response.content, llm);
 
@@ -161,9 +161,9 @@ export async function invokeModel(llm: LLMModel, soulId: string): Promise<TaskRe
         try {
             parsedData = llmOutput.parse(cleaned);
         } catch (error: any) {
-            console.log(error);
+            // console.log(error);
             // If parsing fails, try to fix the schema errors
-            console.log('Schema validation failed, attempting to fix errors', error.message, cleaned,);
+            // console.log('Schema validation failed, attempting to fix errors', error.message, cleaned,);
             cleaned = await fixSchemaErrors(response.content, llmOutput, error.message, llm);
             if (!cleaned) {
                 cleaned = [];
@@ -187,7 +187,7 @@ export async function invokeModel(llm: LLMModel, soulId: string): Promise<TaskRe
             //     await Summarizer.summarize_notes(soul.id);
             // }
         } catch (error) {
-            console.log(error)
+            console.log(error.message)
             // it's none of our business, it won't block the operation
         }
 
@@ -214,7 +214,7 @@ export async function invokeModel(llm: LLMModel, soulId: string): Promise<TaskRe
             usage_metadata: response.usage_metadata as any,
         }
     } catch (error) {
-        console.log(error);
+        console.log(error.message);
     }
 }
 
@@ -272,7 +272,7 @@ Schema: ${zodToTs(schema)}
 Fix the output to match the schema.
 Return the fixed output in a \`\`\`json\` markup and do not include any other text.
 `
-    console.log('FIXING SCHEMA ERRORS', fixPrompt);
+    // console.log('FIXING SCHEMA ERRORS', fixPrompt);
 
     await new Promise(resolve => setTimeout(resolve, 2000));
     const result = await instance.invoke([

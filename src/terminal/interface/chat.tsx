@@ -582,7 +582,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ assistant }) => {
         await assistant.stats();
         const history = await assistant.history(20, 1);
         // pushSystemMessage(JSON.stringify(history))
-        fs.writeFile('./debug.json', JSON.stringify(history, null, 2))
+        // fs.writeFile('./debug.json', JSON.stringify(history, null, 2))
         const editedHistory =
           history?.data?.map((msg) => ({
             role: msg.role as Message["role"],
@@ -592,9 +592,9 @@ const ChatApp: React.FC<ChatAppProps> = ({ assistant }) => {
         scrollToBottomOnNextTick.current = true;
         setMessages(editedHistory);
       } catch (err: any) {
-        fs.writeFile('./debug.json', JSON.stringify({
-          error: err.message
-        }, null, 2))
+        // fs.writeFile('./debug.json', JSON.stringify({
+        //   error: err.message
+        // }, null, 2))
         pushSystemMessage(err.message);
       }
     };

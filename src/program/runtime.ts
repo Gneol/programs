@@ -189,7 +189,7 @@ export class ProgramRuntime {
                 console.error(error.message);
             }
         }
-        console.log(this.mcpTools)
+        // console.log(this.mcpTools)
     }
 
     eventBucketCallback = async (action, message) => {
@@ -353,7 +353,7 @@ export class ProgramRuntime {
             if (runtime) {
                 runtime.agentId = soul.id;
                 await runtime.handleToolDefinitions(runtime.program);
-                console.log(runtime.program.mcpConfigs, 'programs');
+                // console.log(runtime.program.mcpConfigs, 'programs');
             }
             // console.log(`Loaded soul "${soul.id}" → program "${result.title}"`);
         } catch (err: any) {
