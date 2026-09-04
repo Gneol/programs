@@ -4,19 +4,20 @@ import path from 'path';
 import { Command } from 'commander';
 import { getTemplate, resources } from './program/template.js';
 import { resourceAction, deploy, convert, deleteAgent } from './cli-utils/resource.js';
-import { startServer } from './server.js';
+import { GneolServer, startServer } from './server.js';
 import { execDetached } from './tools/utils/cliInvoke.js';
 import { execSync } from 'child_process';
 import { startChat } from './terminal/interface/chat.js';
 import { initializeSession } from './cli-utils/init.js';
 import net from 'net';
+import { api } from './cli-utils/api.js';
 
 function readPortConfig(): number {
   try {
     const configPath = path.join(os.homedir(), '.gneol', 'port.config');
     const port = parseInt(fs.readFileSync(configPath, 'utf8').trim(), 10);
     if (!isNaN(port)) return port;
-  } catch {}
+  } catch { }
   return 3999;
 }
 
@@ -218,7 +219,7 @@ program
   .option('-a, --agent', 'List and select an existing agent')
   .action(async (opts: any) => {
     try {
-      await ensureServerRunning();
+      // await ensureServerRunning();
       const { soulId, programPath, name } = await initializeSession({ id: opts.id, agent: opts.agent });
       // program should be deployed
       // console.log(soulId, programPath, name, 'CHECK CHECK');
@@ -229,7 +230,7 @@ program
     }
   });
 
-  // ─── Start Server ───
+// ─── Start Server ───
 
 program
   .command('start')
@@ -249,6 +250,45 @@ program
   });
 
 // ─── Stop Server ───
+
+// ___ LICENSE ___
+
+const licenseCmd = program.command('license')
+licenseCmd
+  .command('activate')
+  .description('Activate license')
+  .action(async () => {
+    const { text, isCancel } = await import('@clack/prompts');
+    const licenseKey = await text({
+      message: 'Enter your Gneol license key:',
+      placeholder: 'e.g. XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX',
+    });
+    if (isCancel(licenseKey) || !licenseKey) {
+      console.log('Activation cancelled.');
+      process.exit(0);
+    }
+    const response = await api.GneolServer.license('activate', { key: licenseKey as string })
+    console.log(response.data)
+    process.exit(0)
+  })
+
+licenseCmd
+  .command('deactivate')
+  .description('Deactivate license')
+  .action(async () => {
+    const response = await api.GneolServer.license('deactivate', { key: '' })
+    console.log(response.data)
+    process.exit(0)
+  })
+
+licenseCmd
+  .command('status')
+  .description('Check license status')
+  .action(async () => {
+    const response = await api.GneolServer.license('status', { key: '' })
+    console.log(response.data)
+    process.exit(0)
+  })
 
 // ─── Secrets (encrypted API key store) ───
 
@@ -327,8 +367,9 @@ if (require.main === module) {
   // If no command given, default to 'init'
   // const args = process.argv.slice(2);
   // if (args.length === 0 || args[0].startsWith('-')) {
-    // program.parse(['node', 'gneol', 'init', ...args]);
+  // program.parse(['node', 'gneol', 'init', ...args]);
   // } else {
-    program.parse(process.argv);
+  ensureServerRunning();
+  program.parse(process.argv);
   // }
 }

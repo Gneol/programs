@@ -183,9 +183,9 @@ export async function invokeModel(llm: LLMModel, soulId: string): Promise<TaskRe
                 await Summarizer.summarize(soul.id, llm);
             }
 
-            // if (notes) {
-            //     await Summarizer.summarize_notes(soul.id);
-            // }
+            if (notes) {
+                await Summarizer.summarize_notes(soul.id, llm);
+            }
         } catch (error) {
             console.log(error.message)
             // it's none of our business, it won't block the operation
@@ -239,7 +239,7 @@ const _detect_token_excess = (response: TaskResponse, notes: string[], chat: Sou
     const max_tokens = model.options?.max_tokens || 8000;
     const tokenUsage: any = response.usage_metadata;
     const inputTokens = tokenUsage.input_tokens ? tokenUsage.input_tokens : tokenUsage.inputTokens;
-    // console.log(max_tokens, tokenUsage, inputTokens, "TOKENS USAGE");
+    console.log(max_tokens, tokenUsage, inputTokens, "TOKENS USAGE");
     Stream.publish_event('llm', chat.id, {
         type: 'sub_state',
         state: `${model.name} - ${format_token_to_string(inputTokens)}`

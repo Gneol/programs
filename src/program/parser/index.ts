@@ -23,7 +23,7 @@ export { parseTimeExpression, parseEnvFile, mergeImports };
  */
 export function parseGneol(content: string, path: string = ''): GneolProgram {
 
-    console.log(path)
+    // console.log(path)
     // 0. Parse model() bindings FIRST so header parsers don't steal .name() from model blocks
     const { modelBindings, filteredContent: afterModels } = parseModelBindings(content);
     // console.log(modelBindings, afterModels)

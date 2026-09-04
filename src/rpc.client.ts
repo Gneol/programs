@@ -401,8 +401,8 @@ export class RPCClient {
          * @param {programPath: string, watch: boolean}
          * @returns {Promise<rpcResponseType<any>>}
          */
-        async deploy(programPath: string, watch?: boolean): Promise<rpcResponseType<any>> {
-            return await RPCClient.apiCallback('GneolServer.deploy', watch ? [programPath, watch] : [programPath]);
+        async deploy(programPath: string, watch: boolean): Promise<rpcResponseType<any>> {
+            return await RPCClient.apiCallback('GneolServer.deploy', [programPath, watch]);
         },
         /**
          * approve permission
@@ -421,6 +421,13 @@ export class RPCClient {
          */
         async setWorkspace(id: string, workSpace: string): Promise<rpcResponseType<any>> {
             return await RPCClient.apiCallback('GneolServer.setWorkspace', [id, workSpace]);
+        },
+        /**
+         * @param {command: string, options: Partial<{ key: string }> }
+         * @returns {Promise<rpcResponseType<any>>}
+         */
+        async license(command: string, options: Partial<{ key: string }> ): Promise<rpcResponseType<any>> {
+            return await RPCClient.apiCallback('GneolServer.license', [command, options]);
         },
         /**
          * chat an agent

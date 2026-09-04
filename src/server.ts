@@ -12,6 +12,7 @@ import { llm_message_internal } from "./llm/utils/types.js";
 import { markForRebuild } from "./llm/system_message.js";
 import { ProgramWatcher } from "./program/watcher.js";
 import { storeToken, getToken, removeToken, listTokens } from "./tokenStore.js";
+import { License, LicenseEngine } from './program/premium/license';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -138,7 +139,7 @@ export class GneolServer {
             }
 
             case 'event': {
-                const events: { marker: string; instructions: string[]; program: string, programPath: string  }[] = [];
+                const events: { marker: string; instructions: string[]; program: string, programPath: string }[] = [];
                 for (const rt of runtimes) {
                     for (const action of rt.program.actions.filter(a => a.type === 'event')) {
                         events.push({
@@ -293,10 +294,6 @@ export class GneolServer {
         return 'trigger sent';
     }
 
-
-
-
-
     // ── Secrets (encrypted token store) ──
 
     @ttc.describe({
@@ -400,6 +397,35 @@ export class GneolServer {
         });
         await markForRebuild(id, true);
         return 'workspace set'
+    }
+
+
+    @ttc.describe({
+        param_index: 2,
+        parameterSchema: z.object({
+            command: z.string(),
+            options: z.object({
+                key: z.string()
+            })
+        })
+    })
+    async license(command: string, option: {
+        key: string
+    }) {
+        switch (command) {
+            case 'activate':
+                return LicenseEngine.activateLicense(option.key)
+
+            case 'deactivate':
+                return await LicenseEngine.deactivateLicense();
+
+            case 'status':
+                const state = await LicenseEngine.hasLicense();
+                return state ? 'License is active' : 'License is inactive'
+
+            default:
+                break;
+        }
     }
 
 

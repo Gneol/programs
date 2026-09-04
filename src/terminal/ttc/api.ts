@@ -106,7 +106,7 @@ export class Assistant {
         await this._ensureReady();
         const header = await this.program.header.get();
         this.llm = header.model;
-        this.name = name;
+        this.name = header.name;
         // return { llm: this.llm, model: header.model };
     }
 

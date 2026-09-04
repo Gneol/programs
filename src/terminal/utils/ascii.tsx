@@ -20,8 +20,8 @@ export const ASCIIHeader: React.FC<ASCIIHeaderProps> = React.memo(({ assistantNa
             <Text bold color="cyan">Gneol</Text>
             <Text dimColor>  └── https://gneol.github.com</Text>
             <Text> </Text>
-            <Text color="gray">Agent - <Text bold color="cyan">{assistantName}</Text></Text>
-            <Text color="gray">Model - <Text bold color="cyan">{model || '...'}</Text></Text>
+            <Text color="gray">Program - <Text bold color="cyan">{assistantName}</Text></Text>
+            {/* <Text color="gray">Model - <Text bold color="cyan">{model || '...'}</Text></Text> */}
             <Text dimColor>Use <Text color="yellow">/help</Text> to see available commands..</Text>
             {/* {!licenseState.valid && (
               <Text dimColor color="yellow">Free tier — use <Text color="cyan">/upgrade</Text> or visit console.gneol.com</Text>

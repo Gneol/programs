@@ -15,6 +15,7 @@ import { ProgramToolManager } from '../tools/utils/ProgramToolManager';
 import { markForRebuild } from '../llm/system_message';
 import { syncMcpToolsSource } from '../mcp';
 import { f_schema } from '../llm/utils/types';
+import { License } from './premium/license'; // free-tier gate (3 programs)
 
 
 export class ProgramRuntime {
@@ -77,21 +78,17 @@ export class ProgramRuntime {
             return { title: program.title, soulId: '', name: '' };
         }
 
-        // console.log(ProgramRuntime.NeuralCore.size)
-        // // ── Subscription gate: only one program may be active without a subscription ──
-        // // If we already have at least one runtime and this is a different program,
-        // // block the deploy unless subscription is active (or this is an init restore).
-        // if (!skipSubscriptionCheck && !ProgramRuntime.subscription && ProgramRuntime.NeuralCore.size > 3) {
-        //     for (const existingPath of ProgramRuntime.NeuralCore.keys()) {
-        //         if (existingPath !== resolvedPath) {
-        //             throw new Error(
-        //                 `You can only run one program at a time on the free plan. ` +
-        //                 `Program "${existingPath}" is already active. ` +
-        //                 `Upgrade to Premium to run multiple programs simultaneously.`
-        //             );
-        //         }
-        //     }
-        // }
+        // ── Subscription gate: free tier allows 3 programs, premium required beyond that ──
+        if (!skipSubscriptionCheck && !ProgramRuntime.NeuralCore.has(resolvedPath) && ProgramRuntime.NeuralCore.size >= 3) {
+            const license = new License();
+            const licensed = await license.hasLicense();
+            if (!licensed) {
+                throw new Error(
+                    `Free plan allows up to 3 programs. "${resolvedPath}" would exceed that limit. ` +
+                    `Upgrade to Premium to run more programs.`
+                );
+            }
+        }
 
         // Reuse existing runtime or create a new one (keyed by resolved path)
         let runtime = ProgramRuntime.NeuralCore.get(resolvedPath);

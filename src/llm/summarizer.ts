@@ -47,41 +47,33 @@ export class Summarizer {
         return preservedMessages;
     }
 
-    // static async summarize_notes(conversation_id: string) {
+    static async summarize_notes(conversation_id: string, instance: any) {
 
-    //     const chat = await prisma.soul.findUnique({ where: { id: conversation_id } })
-    //     if (!chat) return;
+        const store = getGlobalSoulStore();
+        let chat = store.get(conversation_id);
+        if (!chat) return;
 
-    //     const model = await ProgramRuntime.getAgentModel(conversation_id);
-    //     if (!model) return;
+        const notes: string[] = chat.notes as any || [];
+        if (notes.length === 0) return;
 
-    //     const notes: string[] = chat.notes as any || [];
-    //     if (notes.length === 0) return;
+        const stringifiedNotes = JSON.stringify(notes);
 
-    //     const stringifiedNotes = JSON.stringify(notes);
+        const prompt = `Summarize these notes into a brief and concise summary noting the important points that needs to persist in the memory of this assistant:\n\n${stringifiedNotes}\n\nSummary:`;
 
-    //     const prompt = `Summarize these notes into a brief and concise summary noting the important points that needs to persist in the memory of this assistant:\n\n${stringifiedNotes}\n\nSummary:`;
+        if (!instance) return;
 
-    //     const instance = await CoreEngine.instantiate_model(model);
-    //     if (!instance) return;
+        const response = await instance.invoke([
+            { role: 'system', content: 'You are a helpful assistant that summarizes notes into concise summaries.' },
+            { role: 'user', content: prompt }
+        ]);
 
-    //     const response = await instance.invoke([
-    //         { role: 'system', content: 'You are a helpful assistant that summarizes notes into concise summaries.' },
-    //         { role: 'user', content: prompt }
-    //     ]);
-
-    //     if (response && response.content) {
-    //         const summary = response.content.trim();
-    //         console.log(summary);
-    //         await prisma.soul.update({
-    //             where: { id: conversation_id },
-    //             data: {
-    //                 notes: [summary],
-    //                 rebuild_system_message: true
-    //             }
-    //         });
-    //     }
-    // }
+        if (response && response.content) {
+            const summary = response.content.trim();
+            store.update(conversation_id, {
+                summary
+            })
+        }
+    }
 
     static async summarize_(_messages: any, chat: Soul, llm: any, query?: string): Promise<string | null> {
 
@@ -91,7 +83,7 @@ export class Summarizer {
         const messages: llm_message_internal[] = _messages;
         const stringifiedMessages = JSON.stringify(messages);
 
-        const summaryPrompt = query ?  query : 'Summarize these messages to a maximum of 30 bullet points, noting the important points that needs to persist in the memory of this assistant';
+        const summaryPrompt = query ? query : 'Summarize these messages to a maximum of 30 bullet points, noting the important points that needs to persist in the memory of this assistant';
 
         const prompt = `${summaryPrompt}:\n\n${stringifiedMessages}\n\nSummary:`;
 
@@ -100,7 +92,7 @@ export class Summarizer {
             { role: 'user', content: prompt }
         ]);
 
-        return response ?  response.content : null;
+        return response ? response.content : null;
     }
 
 

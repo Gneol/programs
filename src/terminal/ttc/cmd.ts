@@ -5,6 +5,8 @@ import { listTools, createTool, viewTool, editTool, deleteTool } from "../tools/
 import { showMCPMenu } from "../mcp/ui";
 import { listModels, addModel, updateModel, deleteModel } from "../models/ui";
 import { showSecretsList } from "../secrets/ui";
+import { licenseState, setLicenseValid } from "../utils/licenseStatus";
+import { api } from "../../cli-utils/api.js";
 import fs from 'fs';
 
 
@@ -73,12 +75,9 @@ export const initCommands = () => {
             '/quit           Quit the CLI',
             '/mcp            Add/remove/list MCP servers',
             '/models         Manage AI models',
+            '/license        Check/activate/deactivate license',
             '/permission     View/change CLI permission level',
         ];
-
-        // if (!licenseState.valid) {
-        //     commands.push('/upgrade        Activate license to create multiple agents');
-        // }
 
         await showPrompt({
             message: `
@@ -304,26 +303,75 @@ Available commands:
         }
     })
 
-    // if (!licenseState.valid) {
-    //     registerCommand('upgrade', async () => {
-    //         const licenseKey = await showPrompt({
-    //             message: 'Enter Gneol License key to upgrade from free tier:',
-    //             type: 'text'
-    //         });
-    
-    //         if (!licenseKey || licenseKey === 'cancel') {
-    //             pushSystemMessage && pushSystemMessage('Upgrade cancelled.');
-    //             return;
-    //         }
-    
-    //         const response = await LicenseManager.setLicense(licenseKey as string);
-    //         if (response.data?.success) {
-    //             setLicenseValid(true);
-    //             pushSystemMessage && pushSystemMessage('✅ License activated successfully! You can now create multiple agents.');
-    //         } else {
-    //             pushSystemMessage && pushSystemMessage('❌ License activation failed: ' + (response.data?.message || 'Unknown error'));
-    //         }
-    //     })
-    // }
+    registerCommand('license', async () => {
+        const action = await showPrompt({
+            message: `License status: ${licenseState.valid ? '✅ Active' : 'Not activated'}`,
+            options: [
+                { label: 'Check status', value: 'status' },
+                { label: 'Activate license', value: 'activate' },
+                { label: 'Deactivate license', value: 'deactivate' },
+                { label: 'Cancel', value: 'cancel' }
+            ]
+        });
+
+        if (!action || action === 'cancel') return;
+
+        try {
+            if (action === 'status') {
+                const res: any = await api.GneolServer.license('status', { key: '' });
+                const valid = typeof res === 'string' ? res.toLowerCase().includes('active') : !!res?.valid;
+                setLicenseValid(valid);
+                pushSystemMessage && pushSystemMessage(typeof res === 'string' ? res : (res?.message || 'License status retrieved.'));
+                return;
+            }
+
+            if (action === 'activate') {
+                const licenseKey = await showPrompt({
+                    message: 'Enter Gneol License key:',
+                    type: 'text'
+                });
+
+                if (!licenseKey || licenseKey === 'cancel') {
+                    pushSystemMessage && pushSystemMessage('Activation cancelled.');
+                    return;
+                }
+
+                const res: any = await api.GneolServer.license('activate', { key: licenseKey });
+                if (res?.success) {
+                    setLicenseValid(true);
+                    pushSystemMessage && pushSystemMessage('✅ License activated successfully! You can now create multiple agents.');
+                } else {
+                    pushSystemMessage && pushSystemMessage('❌ License activation failed: ' + (res?.message || 'Unknown error'));
+                }
+                return;
+            }
+
+            if (action === 'deactivate') {
+                const confirm = await showPrompt({
+                    message: 'Are you sure you want to deactivate your license?',
+                    options: [
+                        { label: 'Yes, deactivate', value: 'yes' },
+                        { label: 'No, cancel', value: 'no' }
+                    ]
+                });
+
+                if (confirm !== 'yes') {
+                    pushSystemMessage && pushSystemMessage('Deactivation cancelled.');
+                    return;
+                }
+
+                const res: any = await api.GneolServer.license('deactivate', { key: '' });
+                if (res?.success) {
+                    setLicenseValid(false);
+                    pushSystemMessage && pushSystemMessage('License deactivated.');
+                } else {
+                    setLicenseValid(false);
+                    pushSystemMessage && pushSystemMessage('⚠️ ' + (res?.message || 'Deactivation failed.'));
+                }
+            }
+        } catch (error: any) {
+            pushSystemMessage && pushSystemMessage('License operation failed: ' + (error?.message || error));
+        }
+    })
 
 }
