@@ -62,6 +62,7 @@ export type ModelCacheData = {
     name: string;
     provider: string;
     program: string;
+    apiKey?: string;
     options: {
         temperature: number;
         max_tokens: number;

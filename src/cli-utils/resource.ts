@@ -58,14 +58,14 @@ export async function deleteAgent(agentId: string): Promise<string> {
  * available. If a model is not cached on the server and its env var is missing,
  * prompt the user to supply it via .env, global env, or internal storage.
  */
-export async function validateModelEnv(filePath: string): Promise<void> {
+export async function validateModelEnv(filePath: string): Promise<any> {
   const resolvedPath = path.resolve(filePath);
   const program = parseGneolFile(resolvedPath);
   const bindings = program.modelBindings || [];
   if (bindings.length === 0) return;
 
   // 1. Fetch cached models from server
-  let cachedModels: { id: string; cached: boolean }[] = [];
+  let cachedModels: { id: string; cached: boolean }[] = []; // this should fetch list of models from the server
   try {
     const res = await api.GneolServer.list('model', 1, 100, '');
     const items = (res as any)?.data || [];
@@ -154,6 +154,7 @@ export async function validateModelEnv(filePath: string): Promise<void> {
       await api.GneolServer.storeSecret(binding.apiKey, keyValue as string);
       console.log(`   ✅ Stored ${binding.apiKey} in encrypted token store.`);
       process.env[binding.apiKey] = keyValue as string;
+      await deploy(filePath); // to ensure the stored model secrets are embedded in the model instance as set
     }
   }
 }

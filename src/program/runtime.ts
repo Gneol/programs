@@ -79,7 +79,7 @@ export class ProgramRuntime {
         }
 
         // ── Subscription gate: free tier allows 3 programs, premium required beyond that ──
-        if (!skipSubscriptionCheck && !ProgramRuntime.NeuralCore.has(resolvedPath) && ProgramRuntime.NeuralCore.size >= 3) {
+        if (!skipSubscriptionCheck && !ProgramRuntime.NeuralCore.has(resolvedPath) && ProgramRuntime.NeuralCore.size >= 5) {
             const license = new License();
             const licensed = await license.hasLicense();
             if (!licensed) {
@@ -169,7 +169,7 @@ export class ProgramRuntime {
     }
 
     handleMcpConfigs = async (program: GneolProgram) => {
-        console.log(program.mcpConfigs, 'check..', program.path)
+        // console.log(program.mcpConfigs, 'check..', program.path)
         // console.log('handling mcp scripts...', program.mcpConfigs)
         if (!program.mcpConfigs || Object.keys(program.mcpConfigs).length === 0)
             return;
@@ -178,9 +178,9 @@ export class ProgramRuntime {
             try {
                 const tools = await syncMcpToolsSource(decl.config, programDir, {
                     tokens: decl.tokens,
-                    serverName: name,
+                    serverName: name
                 });
-                console.log(tools);
+                // console.log(tools);
                 this.mcpTools = [...(this.mcpTools || []), ...tools];
             } catch (error) {
                 console.error(error.message);
@@ -230,6 +230,7 @@ export class ProgramRuntime {
                 if (binding.apiKey && !envStore[binding.apiKey] && !process.env[binding.apiKey]) {
                     try {
                         const token = getToken(binding.apiKey);
+                        // console.log(token, 'from internal storage, key', binding.apiKey)
                         if (token) {
                             envStore[binding.apiKey] = token;
                             process.env[binding.apiKey] = token;
@@ -345,7 +346,7 @@ export class ProgramRuntime {
             return;
         }
         try {
-            const result = await ProgramRuntime.deployProgram(soul.programPath, soul.id, true); // skip subscription gate on init restore
+            await ProgramRuntime.deployProgram(soul.programPath, soul.id, true); // skip subscription gate on init restore
             const runtime = ProgramRuntime.NeuralCore.get(fspath.resolve(soul.programPath));
             if (runtime) {
                 runtime.agentId = soul.id;
@@ -405,7 +406,7 @@ export class ProgramRuntime {
                 }
 
                 // if need be, check for condition if exist.
-                console.log(JSON.stringify(a, null, 2))
+                // console.log(JSON.stringify(a, null, 2))
                 const isConditionGo = a.condition ? await this.isCondition_a_Go(a.condition) : true;
                 const isExecConditionGo = a.ifExec ? await this.isExecCondition_a_Go(a.ifExec) : true;
                 if (isConditionGo && isExecConditionGo) {
@@ -415,7 +416,7 @@ export class ProgramRuntime {
                     } else {
                         await this.trigger(msg);
                     }
-                    console.log(a.type, a.marker, Date.now() - a.snapShot)
+                    // console.log(a.type, a.marker, Date.now() - a.snapShot)
 
                     // One-shot relative times (e.g. "+5min") should not re-fire
                     if (a.marker.startsWith('+')) {
@@ -502,7 +503,7 @@ export class ProgramRuntime {
             const modelData = cachedModels.find(m => m.value.name === chat.llm);
             const response = await modelData.value.llm.invoke(prompt as any);
             const result = response.content;
-            console.log(result);
+            // console.log(result);
 
             return result.trim().toLowerCase() === 'true' || result.trim().toLowerCase().includes('true');
         } catch (error) {

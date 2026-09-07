@@ -67,8 +67,17 @@ export async function ModelInstance(config: BaseModelConfig): Promise<ModelCache
   const cacheKey = config.tag ?? `${config.provider}:${config.model}`;
   // console.log(cacheKey, 'CACHE KEY!!');
   const cached = await cacheEngine.get(cacheKey);
-  if (cached) return cached;
+  if (cached) {
+    // If cached entry was created with a missing/stale API key but we now have
+    // a key (or the model/provider changed), invalidate so we rebuild the instance.
+    const sameProvider = cached.provider === config.provider;
+    const sameModel = cached.name === config.model;
+    const sameKey = cached.apiKey === (config.apiKey ?? undefined);
+    if (sameProvider && sameModel && sameKey) return cached;
+    await cacheEngine.invalidate(cacheKey);
+  }
 
+  // console.log(config.apiKey, config.program);
   const llm = await createLLMInstance(config);
 
   const rateLimit = config.rateLimit ?? 20;
@@ -102,6 +111,7 @@ export async function ModelInstance(config: BaseModelConfig): Promise<ModelCache
     rateLimiter,
     name: config.model,
     provider: config.provider,
+    apiKey: config.apiKey,
     options: {
       temperature: config.temperature,
       max_tokens: config.maxTokens,
@@ -135,7 +145,11 @@ export async function preloadModelsFromBindings(
     // Resolve apiKey: look up in envStore, then process.env, then fallback to literal
     let resolvedKey: string | undefined;
     if (binding.apiKey) {
-      resolvedKey = envStore[binding.apiKey] ?? process.env[binding.apiKey] ?? binding.apiKey;
+      // Order: loaded env file → process.env → internal token store.
+      // (The final fallback here should never be the literal env var name —
+      // that would cache a bogus key. Callers are expected to have run
+      // runtime.resolveEnv() already, which pulls from the token store.)
+      resolvedKey = envStore[binding.apiKey] ?? process.env[binding.apiKey];
     }
 
     const config: BaseModelConfig = {

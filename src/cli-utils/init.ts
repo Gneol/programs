@@ -16,14 +16,14 @@ export interface SessionInfo {
 function scaffoldIndexGneol(): string {
   const folderName = path.basename(process.cwd()).replace(/[^a-zA-Z0-9_-]/g, '_');
   const content = `program("${folderName}")
-  .model("primary")
+  .model("prime")
   .env(".env")
   .context("USER INSTRUCTIONS").resource("GNEOL.md")
 
-model("primary")
+model("prime")
   .provider("deepseek")
   .modelId("deepseek-v4-flash")
-  .apiKey("DEEPSEEK_API_KEY")
+  .apiKey("DEEPSEEK_API_KEY_")
   .temperature(0.7)
   .maxTokens(60000)
 

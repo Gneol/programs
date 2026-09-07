@@ -66,7 +66,7 @@ export function storeToken(key: string, value: string): void {
 /** Retrieve a stored token, or null if not found. */
 export function getToken(key: string): string | null {
   const store = readStore();
-  console.log(store)
+  // console.log(store)
   return store[key] ?? null;
 }
 

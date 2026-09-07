@@ -219,7 +219,7 @@ program
   .option('-a, --agent', 'List and select an existing agent')
   .action(async (opts: any) => {
     try {
-      // await ensureServerRunning();
+      await ensureServerRunning(); 
       const { soulId, programPath, name } = await initializeSession({ id: opts.id, agent: opts.agent });
       // program should be deployed
       // console.log(soulId, programPath, name, 'CHECK CHECK');
@@ -250,6 +250,19 @@ program
   });
 
 // ─── Stop Server ───
+
+program
+  .command('stop')
+  .description('Stop the Gneol server')
+  .action(() => {
+    try {
+      execSync('kill $(lsof -t -i:3999)', { stdio: 'ignore' });
+      console.log('Server stopped.');
+    } catch {
+      console.log('Server not running or could not be stopped.');
+    }
+    process.exit(0)
+  });
 
 // ___ LICENSE ___
 
@@ -345,20 +358,6 @@ program
     process.exit(0);
   });
 
-
-
-program
-  .command('stop')
-  .description('Stop the Gneol server')
-  .action(() => {
-    try {
-      execSync('kill $(lsof -t -i:3999)', { stdio: 'ignore' });
-      console.log('Server stopped.');
-    } catch {
-      console.log('Server not running or could not be stopped.');
-    }
-    process.exit(0)
-  });
 
 export default program;
 
