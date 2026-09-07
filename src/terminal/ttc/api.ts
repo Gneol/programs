@@ -70,8 +70,8 @@ export class Assistant {
         // await this.ready;
     }
 
-    async message(text: string) {
-        this.actionClient.chat(text);
+    async message(text: string, urls: string[]) {
+        this.actionClient.chat(text, urls);
     }
 
     async trigger(text: string) {

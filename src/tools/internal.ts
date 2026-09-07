@@ -9,6 +9,7 @@ import { Stream } from "../db/stream";
 import { appFunctions } from ".";
 
 import { ProgramRuntime } from '../program/runtime';
+import { Bucket } from '../llm/bucket';
 
 
 const store = getGlobalSoulStore();
@@ -375,6 +376,25 @@ Internal.tool({
         return souls.slice(offset, offset + limit);
     }
 })
+
+Internal.tool({
+    name: 'attach',
+    description: 'Attach images to your conversation context',
+    parameters: z.object({
+        url: z.array(z.string().describe('Image path or url'))
+    }),
+    async action(input, id) {
+        const soul = store.get(id);
+        return `${soul.name} is attaching ${input.url.length} image(s)`;
+    },
+    async func({ url }, id: string) {
+        await Bucket.attach({
+            conversation_id: id,
+            attachments: url
+        })
+        return `Attached ${url.length} image(s) to your context`;
+    }
+});
 
 // Internal.tool({
 //     name: 'deployProgram',

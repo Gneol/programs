@@ -84,8 +84,8 @@ export class ProgramRuntime {
             const licensed = await license.hasLicense();
             if (!licensed) {
                 throw new Error(
-                    `Free plan allows up to 3 programs. "${resolvedPath}" would exceed that limit. ` +
-                    `Upgrade to Premium to run more programs.`
+                    `Free Beta plan allows up to 3 programs. "${resolvedPath}" would exceed that limit. ` +
+                    `Upgrade to Premium to run more programs`
                 );
             }
         }

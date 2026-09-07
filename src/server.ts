@@ -16,6 +16,7 @@ import { License, LicenseEngine } from './program/premium/license';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+import { Bucket } from "./llm/bucket.js";
 
 
 // ── Subscription placeholder ──
@@ -434,10 +435,11 @@ export class GneolServer {
         param_index: 2,
         parameterSchema: z.object({
             id: z.string(),
-            message: z.string()
+            message: z.string(),
+            image_urls: z.array(z.string())
         })
     })
-    async chat(id: string, message: string) {
+    async chat(id: string, message: string, image_urls?: string[]) {
         console.log('Sent message to ', id, 'message:', `"${message}"`)
         const ctx = ttc.requestContext(arguments);
         const store = getGlobalSoulStore();
@@ -446,6 +448,13 @@ export class GneolServer {
         if (ctx._scid) store.update(id, {
             _scid: ctx._scid
         })
+
+        if(image_urls && image_urls.length > 0){
+            await Bucket.attach({
+                conversation_id: id,
+                attachments: image_urls
+            })
+        }
 
         // Append user message
         store.addMessage(id, { role: 'user', content: message });

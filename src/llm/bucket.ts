@@ -12,10 +12,10 @@ import { FileUtils } from './utils/fileUtils'
 export class Bucket {
 
     static async attach(_object: {
-        conversation_id: string, provider: any, message: string, type: 'image' | 'file', attachments: string[]
+        conversation_id: string, attachments: string[]
     }) {
         try {
-            const { conversation_id, provider, message, type, attachments } = _object;
+            const { conversation_id,  attachments } = _object;
 
             // Process attachments to save base64 files and get URLs
             const processedAttachments = await this.processAttachments(attachments);

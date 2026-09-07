@@ -432,11 +432,11 @@ export class RPCClient {
         /**
          * chat an agent
          *
-         * @param {id: string, message: string}
+         * @param {id: string, message: string, image_urls: any[]}
          * @returns {Promise<rpcResponseType<any>>}
          */
-        async chat(id: string, message: string): Promise<rpcResponseType<any>> {
-            return await RPCClient.apiCallback('GneolServer.chat', [id, message]);
+        async chat(id: string, message: string, image_urls: any[]): Promise<rpcResponseType<any>> {
+            return await RPCClient.apiCallback('GneolServer.chat', [id, message, image_urls]);
         },
     }
 
