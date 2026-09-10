@@ -5,7 +5,7 @@ import { getGlobalSoulStore } from "./program.js";
 
 
 
-export type TTCEvents = 'llm' | 'permission' | 'action_log' | 'network'
+export type TTCEvents = 'llm' | 'permission' | 'action_log' | 'network' | 'form'
 type StateType = 'idle' | 'dormant' | 'processing' | 'invoking' | 'stale';
 
 export type State = {

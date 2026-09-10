@@ -510,9 +510,9 @@ const ChatApp: React.FC<ChatAppProps> = ({ assistant }) => {
 
     assistant.subscribe("form", async (data) => {
       try {
-        const { id, question, options } = data.payload;
-        const selected = await select(question, options);
-        assistant.submitFormSelection(id, [selected]);
+        const { id, message, options } = data.payload;
+        const selected = await select(message, options);
+        assistant.submitFormSelection(id, message, selected);
       } catch (error) {
         pushSystemMessage(`Unknow error ${error.message}`);
       }

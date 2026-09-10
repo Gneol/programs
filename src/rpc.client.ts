@@ -438,6 +438,15 @@ export class RPCClient {
         async chat(id: string, message: string, image_urls: any[]): Promise<rpcResponseType<any>> {
             return await RPCClient.apiCallback('GneolServer.chat', [id, message, image_urls]);
         },
+        /**
+         * submit form
+         *
+         * @param {message: string, selection: string, cbId: string}
+         * @returns {Promise<rpcResponseType<any>>}
+         */
+        async submitForm(message: string, selection: string, cbId: string): Promise<rpcResponseType<any>> {
+            return await RPCClient.apiCallback('GneolServer.submitForm', [message, selection, cbId]);
+        },
     }
 
 }

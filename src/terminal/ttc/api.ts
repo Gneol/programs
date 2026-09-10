@@ -86,8 +86,9 @@ export class Assistant {
         this.actionClient?.approveFunction?.(id, approved, message);
     }
 
-    submitFormSelection(id: string, selections: string[]) {
-        // this.actionClient?.submitFormSelection?.(id, selections);
+    submitFormSelection(id: string, message: string, selection: string) {
+        // pushSystemMessage(id + ' ' + message + ' ' + selection)
+        this.actionClient?.submitFormSelection?.(id, message, selection);
     }
 
     async history(limit: number = 10, page: number = 1): Promise<any> {

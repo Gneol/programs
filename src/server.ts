@@ -5,6 +5,7 @@ import { getGlobalSoulStore, GlobalSoulStore } from "./db/program.js";
 import { cacheEngine } from "./models/index.js";
 import { ProgramRuntime } from "./program/runtime.js";
 import { appInvokationHandler, onAuthEvent } from "./tools/index.js";
+import { FormCb } from "./tools/internal.js";
 import { ProgramToolManager } from "./tools/utils/ProgramToolManager.js";
 import { invokationEngine } from "./llm/invoke.js";
 import { Stream } from "./db/stream.js";
@@ -449,7 +450,7 @@ export class GneolServer {
             _scid: ctx._scid
         })
 
-        if(image_urls && image_urls.length > 0){
+        if (image_urls && image_urls.length > 0) {
             await Bucket.attach({
                 conversation_id: id,
                 attachments: image_urls
@@ -469,6 +470,30 @@ export class GneolServer {
         console.log('Invoked oh')
 
         return 'chat sent'
+    }
+
+
+    @ttc.describe({
+        doc: 'submit form',
+        param_index: 3,
+        parameterSchema: z.object({
+            message: z.string(),
+            selection: z.string(),
+            id: z.string()
+        })
+    })
+    async submitForm(id: string, message: string, selection: string) {
+
+        // Resolve the pending form promise if a callback id was provided
+        console.log(FormCb, id)
+        if (id && FormCb[id]) {
+            FormCb[id](
+                message,
+                selection
+            );
+            // console.log('Invoked form submission')
+        }
+        // console.log('Form submission called')
     }
 }
 

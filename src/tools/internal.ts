@@ -10,10 +10,18 @@ import { appFunctions } from ".";
 
 import { ProgramRuntime } from '../program/runtime';
 import { Bucket } from '../llm/bucket';
+import { randomUUID } from "node:crypto";
 
 
 const store = getGlobalSoulStore();
 export const Internal = new Module('Internal');
+
+export const FormCb: Record<string, (message: string, selection: string) => void> = {};
+
+export const invokeFormCb = async (id: string, message: string, selection: string) => {
+    if (FormCb[id]) FormCb[id](message, selection);
+}
+
 
 Internal.tool({
     name: 'editBasicInfo',
@@ -393,6 +401,40 @@ Internal.tool({
             attachments: url
         })
         return `Attached ${url.length} image(s) to your context`;
+    }
+});
+
+Internal.tool({
+    name: 'form',
+    description: 'Helps you to present list of options for user to make choice',
+    parameters: z.object({
+        message: z.string(),
+        options: z.array(z.object({
+            label: z.string(),
+            value: z.string()
+        }))
+    }),
+    async action(input, id) {
+        const soul = store.get(id);
+        return `${soul.name} is sending form`;
+    },
+    func: async ({ options, message }, agentId) => {
+
+        return new Promise<any>((resolve) => {
+            const id = randomUUID();
+            Stream.publish_event('form', agentId, {
+                id,
+                message,
+                options
+            });
+            FormCb[id] = (message, selection) => {
+                delete FormCb[id];
+                resolve({
+                    message,
+                    selection
+                });
+            };
+        })
     }
 });
 
