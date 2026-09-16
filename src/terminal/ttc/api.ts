@@ -14,8 +14,6 @@ export function getServerPort(): number {
     return 3999;
 }
 
-import { pushSystemMessage } from '../interface/chat';
-
 
 export class Assistant {
     private assistantId: string;
@@ -28,7 +26,7 @@ export class Assistant {
     constructor(assistantId: string, programPath: string) {
         try {
             this.assistantId = assistantId;
-            this.server = new Server(`http://localhost:${getServerPort()}`);
+            this.server = new Server(`http://localhost:${getServerPort()}`, assistantId);
             this.program = new Program(programPath);
         } catch (error) {
             console.log(error);

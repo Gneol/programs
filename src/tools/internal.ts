@@ -11,6 +11,8 @@ import { appFunctions } from ".";
 import { ProgramRuntime } from '../program/runtime';
 import { Bucket } from '../llm/bucket';
 import { randomUUID } from "node:crypto";
+import { pushSystemMessage } from "../terminal/interface/chat";
+import { InvokeEngine } from "../llm/invoke";
 
 
 const store = getGlobalSoulStore();
@@ -198,7 +200,7 @@ Internal.tool({
     }),
     func: async (input: { id: string, message: string }, id: string) => {
         const store = getGlobalSoulStore();
-        const sender = store.get(id);
+        let sender = store.get(id);
         const reciever = store.get(input.id);
 
         const message: f_response = {
@@ -210,9 +212,12 @@ Internal.tool({
             }
         };
 
-        let sameScid = sender._scid === reciever._scid;
-        let transports = sameScid ? [sender.id] : [sender.id, reciever.id];
-        new Set(transports).forEach(id => {
+        sender = await InvokeEngine.resolveScid(sender.id)
+        // let sameScid = sender._scid === reciever._scid;
+        // let atLeastOneIsSub = sender.parentId || reciever.parentId;
+        // console.log(sender.name, sender._scid, reciever.name, reciever._scid, sameScid, atLeastOneIsSub);
+        // let transports = sameScid && atLeastOneIsSub ? [sender.id] : [sender.id, reciever.id];
+        new Set([sender._scid]).forEach(id => {
 
             Stream.publish_event('action_log', id,
                 `⏺ ✉️  [${sender.name}] ──❯ [${reciever.name}]

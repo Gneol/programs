@@ -11,6 +11,8 @@ import { useScreenSize, withFullScreen } from 'fullscreen-ink';
 import TextInput from "ink-text-input";
 import fs from "fs/promises";
 import path from "path";
+import os from "os";
+import { spawn } from "child_process";
 import {
   interceptInput,
   isCliInvocation,
@@ -19,7 +21,6 @@ import {
   executeCommand,
 } from "../utils/commandRegistry.js";
 import {
-  confirm,
   text,
   select,
   usePromptState,
@@ -489,22 +490,59 @@ const ChatApp: React.FC<ChatAppProps> = ({ assistant }) => {
 
     assistant.subscribe("permission", async (data) => {
       const { question, pId } = data.payload;
-      const message = question;
-      const allowed = await confirm(message);
-      if (allowed) {
-        assistant.approveFunction(pId, true);
-      } else {
-        const reason = await text(
-          "Reason for rejection (press Enter to skip):",
-        );
-        // assistant.approveFunction(data.id, false);
-        // if (reason.trim()) {
-        assistant.approveFunction(
-          pId,
-          false,
-          `[Permission Denied] Reason: ${reason.trim()}`,
-        );
-        // }
+      const fullText: string = question ?? "";
+
+      // Dumps the full (untruncated) prompt text to a temp file and opens it
+      // in VSCode — useful when the command is longer than the terminal shows.
+      const viewInVscode = async () => {
+        const safe = String(pId ?? "permission").replace(/[^a-zA-Z0-9._-]/g, "_");
+        const file = path.join(os.tmpdir(), `gneol-permission-${safe}.txt`);
+        try {
+          await fs.writeFile(file, fullText, "utf8");
+          const child = spawn("code", [file], { detached: true, stdio: "ignore" });
+          child.unref();
+          pushSystemMessage(`Opened full text in VSCode: ${file}`);
+        } catch (e: any) {
+          pushSystemMessage(
+            `Could not launch VSCode (${e.message}). Full text saved at: ${file}`,
+          );
+        }
+      };
+
+      // Only offer the "view" option when the text is long enough that the
+      // terminal likely truncates it (keeps short prompts clean).
+      const lineCount = fullText.trim().split("\n").filter((l) => l.trim()).length;
+      const options = [
+        { label: "Yes", value: "yes" },
+        { label: "No", value: "no" },
+        ...(lineCount > 12
+          ? [{ label: "View full text in VSCode", value: "view" }]
+          : []),
+      ];
+
+      // Re-prompt until the user answers yes/no; the "view" choice just opens
+      // the file and shows the prompt again.
+      while (true) {
+        const choice = await select(fullText, options);
+
+        if (choice === "view") {
+          await viewInVscode();
+          continue;
+        }
+
+        if (choice === "yes") {
+          assistant.approveFunction(pId, true);
+        } else {
+          const reason = await text(
+            "Reason for rejection (press Enter to skip):",
+          );
+          assistant.approveFunction(
+            pId,
+            false,
+            `[Permission Denied] Reason: ${reason.trim()}`,
+          );
+        }
+        break;
       }
     });
 

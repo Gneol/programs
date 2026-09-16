@@ -13,6 +13,22 @@ export interface PromptConfig {
   type?: 'confirm' | 'select' | 'text'
   defaultValue?: string
   validate?: (input: string) => boolean | string
+  maxLines?: number
+}
+
+// Default cap for how many message lines are rendered inline before truncating.
+const MAX_MESSAGE_LINES = 12
+
+// Split a prompt message into displayable lines, clipping to maxLines and
+// appending a hint when content is hidden (full text is available elsewhere).
+const getMessageLines = (config: PromptConfig): string[] => {
+  const all = config.message.trim().split('\n').filter(line => line.trim())
+  const max = config.maxLines ?? MAX_MESSAGE_LINES
+  if (all.length <= max) return all
+  return [
+    ...all.slice(0, max),
+    `… (+${all.length - max} more lines hidden)`,
+  ]
 }
 
 interface PromptState {

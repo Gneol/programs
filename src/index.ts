@@ -43,10 +43,10 @@ async function ensureServerRunning(): Promise<number> {
   if (await isPortOpen(port)) return port;
   console.log(`Server not running on port ${port}. Starting...`);
   execDetached(`gneol start -p ${port}`);
-  for (let i = 0; i < 10; i++) {
-    await new Promise(res => setTimeout(res, 500));
-    if (await isPortOpen(port)) return port;
-  }
+  // for (let i = 0; i < 10; i++) {
+  //   await new Promise(res => setTimeout(res, 500));
+  //   if (await isPortOpen(port)) return port;
+  // }
   throw new Error(`Server failed to start on port ${port}.`);
 }
 

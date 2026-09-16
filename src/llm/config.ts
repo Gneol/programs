@@ -202,4 +202,9 @@ at("every:1min")
   .max(5)
 
 To Install program call "gneol-cli deploy -f pathToFile" to push update
+9. webhook("url") — WEBHOOK DIRECTIVE
+   Declares a webhook URL to receive Gneol's event payloads.
+   Sub-function:
+   .url("http://your-webhook-url.com") - Specify webhook URL
+   Usage in emit function in @src/llm/invoke.ts
 `    

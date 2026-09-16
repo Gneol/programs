@@ -79,16 +79,16 @@ export class ProgramRuntime {
         }
 
         // ── Subscription gate: free tier allows 3 programs, premium required beyond that ──
-        if (!skipSubscriptionCheck && !ProgramRuntime.NeuralCore.has(resolvedPath) && ProgramRuntime.NeuralCore.size >= 5) {
-            const license = new License();
-            const licensed = await license.hasLicense();
-            if (!licensed) {
-                throw new Error(
-                    `Free Beta plan allows up to 3 programs. "${resolvedPath}" would exceed that limit. ` +
-                    `Upgrade to Premium to run more programs`
-                );
-            }
-        }
+        // if (!skipSubscriptionCheck && !ProgramRuntime.NeuralCore.has(resolvedPath) && ProgramRuntime.NeuralCore.size >= 5) {
+        //     const license = new License();
+        //     const licensed = await license.hasLicense();
+        //     if (!licensed) {
+        //         throw new Error(
+        //             `Free Beta plan allows up to 3 programs. "${resolvedPath}" would exceed that limit. ` +
+        //             `Upgrade to Premium to run more programs`
+        //         );
+        //     }
+        // }
 
         // Reuse existing runtime or create a new one (keyed by resolved path)
         let runtime = ProgramRuntime.NeuralCore.get(resolvedPath);
