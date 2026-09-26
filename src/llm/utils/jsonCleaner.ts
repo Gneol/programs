@@ -7,6 +7,7 @@
 import { jsonrepair } from "jsonrepair";
 import { llmOutput, zodToSimpleString } from './types';
 import { zodToTs } from "./zodToTs";
+import { convertToDSML } from './dsml-converter';
 
 type LLMErrorHandler = (error: Error, output: string) => Promise<string>;
 
@@ -52,7 +53,7 @@ export class gneolJSONCleaner {
             return true;
         }
 
-        if(input.startsWith('<')){
+        if (input.startsWith('<')) {
             return true;
         }
 
@@ -137,6 +138,12 @@ export class gneolJSONCleaner {
 
             try {
                 if (await this.interceptedStrangeYaml(output)) {
+                    if (await this.interceptedStrangeYaml(output)) {
+                        const dsml = convertToDSML(output);
+                        if (dsml) {
+                            return dsml
+                        }
+                    }
                     throw new Error('strange yml, must use json');
                 }
                 const repair_output = jsonrepair(output);
@@ -363,4 +370,5 @@ Rules:
         }
     }
 }
+
 

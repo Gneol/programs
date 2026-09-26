@@ -36,6 +36,9 @@ export class Deepseek {
         messages,
         temperature: this.config.temperature,
         max_tokens: this.config.maxTokens,
+        response_format: {
+          type: 'json_object'
+        }
       });
 
       const usage = response.usage;

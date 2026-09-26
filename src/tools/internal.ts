@@ -13,6 +13,7 @@ import { Bucket } from '../llm/bucket';
 import { randomUUID } from "node:crypto";
 import { pushSystemMessage } from "../terminal/interface/chat";
 import { InvokeEngine } from "../llm/invoke";
+import { GneolServer } from "../server";
 
 
 const store = getGlobalSoulStore();
@@ -109,6 +110,18 @@ Internal.tool({
         };
     }
 });
+
+Internal.tool({
+    name: 'ViewImage',
+    description: 'view image',
+    parameters: z.object({
+        images: z.array(z.string())
+    }),
+    async func({ image_urls }, id) {
+        const instance = ttc.instance(GneolServer);
+        await instance.chat(id, '', image_urls);
+    }
+})
 
 Internal.tool({
     name: 'models',

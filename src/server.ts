@@ -460,12 +460,15 @@ export class GneolServer {
         // Append user message
         store.addMessage(id, { role: 'user', content: message });
 
+
         // Find the model by matching soul's llm tag against cached models
         const modelData = await cacheEngine.get(soul.llm)
         if (!modelData) throw new Error(`Model "${soul.llm}" not cached for soul ${soul.id}`);
 
+        if(Stream.isIdle(modelData.id)){
         // Invoke the model via the rate-limited invoke method (passes soulId)
-        await modelData.invoke(soul.id);
+            await modelData.invoke(soul.id);
+        }
 
         console.log('Invoked oh')
 

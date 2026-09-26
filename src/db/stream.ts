@@ -61,7 +61,7 @@ export class Stream {
 
     static isIdle(id: string): boolean {
         const state = this.activityTracker.get(id);
-        return state ? state.state === 'idle' : false;
+        return state ? state.state === 'idle' : true;
     }
 
     static publish_event = async (event: TTCEvents, agent_id: string, data: any) => {

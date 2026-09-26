@@ -17,6 +17,7 @@ import { invokationEngine, InvokeEngine } from './invoke.js';
 
 const jsonCleaner = new gneolJSONCleaner(5);
 
+const states: Record<string, boolean> = {};
 
 export const onCompleteInvokation = async (input: {
     request: string,
@@ -191,7 +192,7 @@ export async function invokeModel(llm: LLMModel, soulId: string): Promise<TaskRe
             // it's none of our business, it won't block the operation
         }
 
-        // console.log(JSON.stringify(response, null, 2), "TOKEN USAGGGGGGGGEEE")
+        // console.log(JSON.stringify(response, null, 2), "TOKEN USAGE")
 
         const raw = JSON.stringify(cleaned);
         // add to message
@@ -206,6 +207,7 @@ export async function invokeModel(llm: LLMModel, soulId: string): Promise<TaskRe
             state: randomThinkingText('inactive'),
             type: 'state'
         })
+
         return {
             content: raw,
             clean: cleaned,
